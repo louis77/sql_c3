@@ -1,0 +1,498 @@
+module pg;
+
+/*
+ *
+ * pg.c3
+ *    This file contains definitions for functions defined in libpq.
+ *
+ */
+
+def PGconn = void*;
+def PGresult = void*;
+
+enum ConnStatusType : CInt
+{
+	CONNECTION_OK,
+	CONNECTION_BAD,
+	/* Non-blocking mode only below here */
+
+	/*
+	 * The existence of these should never be relied upon - they should only
+	 * be used for user feedback or similar purposes.
+	 */
+	CONNECTION_STARTED,			/* Waiting for connection to be made.  */
+	CONNECTION_MADE,			/* Connection OK; waiting to send.     */
+	CONNECTION_AWAITING_RESPONSE,	/* Waiting for a response from the
+									 * postmaster.        */
+	CONNECTION_AUTH_OK,			/* Received authentication; waiting for
+								 * backend startup. */
+	CONNECTION_SETENV,			/* This state is no longer used. */
+	CONNECTION_SSL_STARTUP,		/* Performing SSL handshake. */
+	CONNECTION_NEEDED,			/* Internal state: connect() needed. */
+	CONNECTION_CHECK_WRITABLE,	/* Checking if session is read-write. */
+	CONNECTION_CONSUME,			/* Consuming any extra messages. */
+	CONNECTION_GSS_STARTUP,		/* Negotiating GSSAPI. */
+	CONNECTION_CHECK_TARGET,	/* Internal state: checking target server
+								 * properties. */
+	CONNECTION_CHECK_STANDBY,	/* Checking if server is in standby mode. */
+	CONNECTION_ALLOCATED,		/* Waiting for connection attempt to be
+								 * started.  */
+}
+
+enum ExecStatusType : CInt
+{
+	PGRES_EMPTY_QUERY,	 		/* empty query string was executed */
+	PGRES_COMMAND_OK,			/* a query command that doesn't return
+								 * anything was executed properly by the
+								 * backend */
+	PGRES_TUPLES_OK,			/* a query command that returns tuples was
+								 * executed properly by the backend, PGresult
+								 * contains the result tuples */
+	PGRES_COPY_OUT,				/* Copy Out data transfer in progress */
+	PGRES_COPY_IN,				/* Copy In data transfer in progress */
+	PGRES_BAD_RESPONSE,			/* an unexpected response was recv'd from the
+								 * backend */
+	PGRES_NONFATAL_ERROR,		/* notice or warning message */
+	PGRES_FATAL_ERROR,			/* query failed */
+	PGRES_COPY_BOTH,			/* Copy In/Out data transfer in progress */
+	PGRES_SINGLE_TUPLE,			/* single tuple from larger resultset */
+	PGRES_PIPELINE_SYNC,		/* pipeline synchronization point */
+	PGRES_PIPELINE_ABORTED,		/* Command didn't run because of an abort
+								 * earlier in a pipeline */
+	PGRES_TUPLES_CHUNK			/* chunk of tuples from larger resultset */
+}
+
+enum ColumnFormatCode : CInt
+{
+	TEXT,
+	BINARY
+}
+
+enum Oid : int (int oid) {
+	BOOLOID = 16,
+	BYTEAOID = 17,
+	CHAROID = 18,
+	NAMEOID = 19,
+	INT8OID = 20,
+	INT2OID = 21,
+	INT2VECTOROID = 22,
+	INT4OID = 23,
+	REGPROCOID = 24,
+	TEXTOID = 25,
+	OIDOID = 26,
+	TIDOID = 27,
+	XIDOID = 28,
+	CIDOID = 29,
+	OIDVECTOROID = 30,
+	JSONOID = 114,
+	XMLOID = 142,
+	PG_NODE_TREEOID = 194,
+	PG_NDISTINCTOID = 3361,
+	PG_DEPENDENCIESOID = 3402,
+	PG_MCV_LISTOID = 5017,
+	PG_DDL_COMMANDOID = 32,
+	XID8OID = 5069,
+	POINTOID = 600,
+	LSEGOID = 601,
+	PATHOID = 602,
+	BOXOID = 603,
+	POLYGONOID = 604,
+	LINEOID = 628,
+	FLOAT4OID = 700,
+	FLOAT8OID = 701,
+	UNKNOWNOID = 705,
+	CIRCLEOID = 718,
+	MONEYOID = 790,
+	MACADDROID = 829,
+	INETOID = 869,
+	CIDROID = 650,
+	MACADDR8OID = 774,
+	ACLITEMOID = 1033,
+	BPCHAROID = 1042,
+	VARCHAROID = 1043,
+	DATEOID = 1082,
+	TIMEOID = 1083,
+	TIMESTAMPOID = 1114,
+	TIMESTAMPTZOID = 1184,
+	INTERVALOID = 1186,
+	TIMETZOID = 1266,
+	BITOID = 1560,
+	VARBITOID = 1562,
+	NUMERICOID = 1700,
+	REFCURSOROID = 1790,
+	REGPROCEDUREOID = 2202,
+	REGOPEROID = 2203,
+	REGOPERATOROID = 2204,
+	REGCLASSOID = 2205,
+	REGCOLLATIONOID = 4191,
+	REGTYPEOID = 2206,
+	REGROLEOID = 4096,
+	REGNAMESPACEOID = 4089,
+	UUIDOID = 2950,
+	PG_LSNOID = 3220,
+	TSVECTOROID = 3614,
+	GTSVECTOROID = 3642,
+	TSQUERYOID = 3615,
+	REGCONFIGOID = 3734,
+	REGDICTIONARYOID = 3769,
+	JSONBOID = 3802,
+	JSONPATHOID = 4072,
+	TXID_SNAPSHOTOID = 2970,
+	PG_SNAPSHOTOID = 5038,
+	INT4RANGEOID = 3904,
+	NUMRANGEOID = 3906,
+	TSRANGEOID = 3908,
+	TSTZRANGEOID = 3910,
+	DATERANGEOID = 3912,
+	INT8RANGEOID = 3926,
+	INT4MULTIRANGEOID = 4451,
+	NUMMULTIRANGEOID = 4532,
+	TSMULTIRANGEOID = 4533,
+	TSTZMULTIRANGEOID = 4534,
+	DATEMULTIRANGEOID = 4535,
+	INT8MULTIRANGEOID = 4536,
+	RECORDOID = 2249,
+	RECORDARRAYOID = 2287,
+	CSTRINGOID = 2275,
+	ANYOID = 2276,
+	ANYARRAYOID = 2277,
+	VOIDOID = 2278,
+	TRIGGEROID = 2279,
+	EVENT_TRIGGEROID = 3838,
+	LANGUAGE_HANDLEROID = 2280,
+	INTERNALOID = 2281,
+	ANYELEMENTOID = 2283,
+	ANYNONARRAYOID = 2776,
+	ANYENUMOID = 3500,
+	FDW_HANDLEROID = 3115,
+	INDEX_AM_HANDLEROID = 325,
+	TSM_HANDLEROID = 3310,
+	TABLE_AM_HANDLEROID = 269,
+	ANYRANGEOID = 3831,
+	ANYCOMPATIBLEOID = 5077,
+	ANYCOMPATIBLEARRAYOID = 5078,
+	ANYCOMPATIBLENONARRAYOID = 5079,
+	ANYCOMPATIBLERANGEOID = 5080,
+	ANYMULTIRANGEOID = 4537,
+	ANYCOMPATIBLEMULTIRANGEOID = 4538,
+	PG_BRIN_BLOOM_SUMMARYOID = 4600,
+	PG_BRIN_MINMAX_MULTI_SUMMARYOID = 4601,
+	BOOLARRAYOID = 1000,
+	BYTEAARRAYOID = 1001,
+	CHARARRAYOID = 1002,
+	NAMEARRAYOID = 1003,
+	INT8ARRAYOID = 1016,
+	INT2ARRAYOID = 1005,
+	INT2VECTORARRAYOID = 1006,
+	INT4ARRAYOID = 1007,
+	REGPROCARRAYOID = 1008,
+	TEXTARRAYOID = 1009,
+	OIDARRAYOID = 1028,
+	TIDARRAYOID = 1010,
+	XIDARRAYOID = 1011,
+	CIDARRAYOID = 1012,
+	OIDVECTORARRAYOID = 1013,
+	PG_TYPEARRAYOID = 210,
+	PG_ATTRIBUTEARRAYOID = 270,
+	PG_PROCARRAYOID = 272,
+	PG_CLASSARRAYOID = 273,
+	JSONARRAYOID = 199,
+	XMLARRAYOID = 143,
+	XID8ARRAYOID = 271,
+	POINTARRAYOID = 1017,
+	LSEGARRAYOID = 1018,
+	PATHARRAYOID = 1019,
+	BOXARRAYOID = 1020,
+	POLYGONARRAYOID = 1027,
+	LINEARRAYOID = 629,
+	FLOAT4ARRAYOID = 1021,
+	FLOAT8ARRAYOID = 1022,
+	CIRCLEARRAYOID = 719,
+	MONEYARRAYOID = 791,
+	MACADDRARRAYOID = 1040,
+	INETARRAYOID = 1041,
+	CIDRARRAYOID = 651,
+	MACADDR8ARRAYOID = 775,
+	ACLITEMARRAYOID = 1034,
+	BPCHARARRAYOID = 1014,
+	VARCHARARRAYOID = 1015,
+	DATEARRAYOID = 1182,
+	TIMEARRAYOID = 1183,
+	TIMESTAMPARRAYOID = 1115,
+	TIMESTAMPTZARRAYOID = 1185,
+	INTERVALARRAYOID = 1187,
+	TIMETZARRAYOID = 1270,
+	BITARRAYOID = 1561,
+	VARBITARRAYOID = 1563,
+	NUMERICARRAYOID = 1231,
+	REFCURSORARRAYOID = 2201,
+	REGPROCEDUREARRAYOID = 2207,
+	REGOPERARRAYOID = 2208,
+	REGOPERATORARRAYOID = 2209,
+	REGCLASSARRAYOID = 2210,
+	REGCOLLATIONARRAYOID = 4192,
+	REGTYPEARRAYOID = 2211,
+	REGROLEARRAYOID = 4097,
+	REGNAMESPACEARRAYOID = 4090,
+	UUIDARRAYOID = 2951,
+	PG_LSNARRAYOID = 3221,
+	TSVECTORARRAYOID = 3643,
+	GTSVECTORARRAYOID = 3644,
+	TSQUERYARRAYOID = 3645,
+	REGCONFIGARRAYOID = 3735,
+	REGDICTIONARYARRAYOID = 3770,
+	JSONBARRAYOID = 3807,
+	JSONPATHARRAYOID = 4073,
+	TXID_SNAPSHOTARRAYOID = 2949,
+	PG_SNAPSHOTARRAYOID = 5039,
+	INT4RANGEARRAYOID = 3905,
+	NUMRANGEARRAYOID = 3907,
+	TSRANGEARRAYOID = 3909,
+	TSTZRANGEARRAYOID = 3911,
+	DATERANGEARRAYOID = 3913,
+	INT8RANGEARRAYOID = 3927,
+	INT4MULTIRANGEARRAYOID = 6150,
+	NUMMULTIRANGEARRAYOID = 6151,
+	TSMULTIRANGEARRAYOID = 6152,
+	TSTZMULTIRANGEARRAYOID = 6153,
+	DATEMULTIRANGEARRAYOID = 6155,
+	INT8MULTIRANGEARRAYOID = 6157,
+	CSTRINGARRAYOID = 1263
+}
+
+fn Oid oid_from_int(int oid) {
+	Oid o;
+	switch (oid)
+	{
+		case 16: o = Oid.BOOLOID;
+		case 17: o = Oid.BYTEAOID;
+		case 18: o = Oid.CHAROID;
+		case 19: o = Oid.NAMEOID;
+		case 20: o = Oid.INT8OID;
+		case 21: o = Oid.INT2OID;
+		case 22: o = Oid.INT2VECTOROID;
+		case 23: o = Oid.INT4OID;
+		case 24: o = Oid.REGPROCOID;
+		case 25: o = Oid.TEXTOID;
+		case 26: o = Oid.OIDOID;
+		case 27: o = Oid.TIDOID;
+		case 28: o = Oid.XIDOID;
+		case 29: o = Oid.CIDOID;
+		case 30: o = Oid.OIDVECTOROID;
+		case 114: o = Oid.JSONOID;
+		case 142: o = Oid.XMLOID;
+		case 194: o = Oid.PG_NODE_TREEOID;
+		case 3361: o = Oid.PG_NDISTINCTOID;
+		case 3402: o = Oid.PG_DEPENDENCIESOID;
+		case 5017: o = Oid.PG_MCV_LISTOID;
+		case 32: o = Oid.PG_DDL_COMMANDOID;
+		case 5069: o = Oid.XID8OID;
+		case 600: o = Oid.POINTOID;
+		case 601: o = Oid.LSEGOID;
+		case 602: o = Oid.PATHOID;
+		case 603: o = Oid.BOXOID;
+		case 604: o = Oid.POLYGONOID;
+		case 628: o = Oid.LINEOID;
+		case 700: o = Oid.FLOAT4OID;
+		case 701: o = Oid.FLOAT8OID;
+		case 705: o = Oid.UNKNOWNOID;
+		case 718: o = Oid.CIRCLEOID;
+		case 790: o = Oid.MONEYOID;
+		case 829: o = Oid.MACADDROID;
+		case 869: o = Oid.INETOID;
+		case 650: o = Oid.CIDROID;
+		case 774: o = Oid.MACADDR8OID;
+		case 1033: o = Oid.ACLITEMOID;
+		case 1042: o = Oid.BPCHAROID;
+		case 1043: o = Oid.VARCHAROID;
+		case 1082: o = Oid.DATEOID;
+		case 1083: o = Oid.TIMEOID;
+		case 1114: o = Oid.TIMESTAMPOID;
+		case 1184: o = Oid.TIMESTAMPTZOID;
+		case 1186: o = Oid.INTERVALOID;
+		case 1266: o = Oid.TIMETZOID;
+		case 1560: o = Oid.BITOID;
+		case 1562: o = Oid.VARBITOID;
+		case 1700: o = Oid.NUMERICOID;
+		case 1790: o = Oid.REFCURSOROID;
+		case 2202: o = Oid.REGPROCEDUREOID;
+		case 2203: o = Oid.REGOPEROID;
+		case 2204: o = Oid.REGOPERATOROID;
+		case 2205: o = Oid.REGCLASSOID;
+		case 4191: o = Oid.REGCOLLATIONOID;
+		case 2206: o = Oid.REGTYPEOID;
+		case 4096: o = Oid.REGROLEOID;
+		case 4089: o = Oid.REGNAMESPACEOID;
+		case 2950: o = Oid.UUIDOID;
+		case 3220: o = Oid.PG_LSNOID;
+		case 3614: o = Oid.TSVECTOROID;
+		case 3642: o = Oid.GTSVECTOROID;
+		case 3615: o = Oid.TSQUERYOID;
+		case 3734: o = Oid.REGCONFIGOID;
+		case 3769: o = Oid.REGDICTIONARYOID;
+		case 3802: o = Oid.JSONBOID;
+		case 4072: o = Oid.JSONPATHOID;
+		case 2970: o = Oid.TXID_SNAPSHOTOID;
+		case 5038: o = Oid.PG_SNAPSHOTOID;
+		case 3904: o = Oid.INT4RANGEOID;
+		case 3906: o = Oid.NUMRANGEOID;
+		case 3908: o = Oid.TSRANGEOID;
+		case 3910: o = Oid.TSTZRANGEOID;
+		case 3912: o = Oid.DATERANGEOID;
+		case 3926: o = Oid.INT8RANGEOID;
+		case 4451: o = Oid.INT4MULTIRANGEOID;
+		case 4532: o = Oid.NUMMULTIRANGEOID;
+		case 4533: o = Oid.TSMULTIRANGEOID;
+		case 4534: o = Oid.TSTZMULTIRANGEOID;
+		case 4535: o = Oid.DATEMULTIRANGEOID;
+		case 4536: o = Oid.INT8MULTIRANGEOID;
+		case 2249: o = Oid.RECORDOID;
+		case 2287: o = Oid.RECORDARRAYOID;
+		case 2275: o = Oid.CSTRINGOID;
+		case 2276: o = Oid.ANYOID;
+		case 2277: o = Oid.ANYARRAYOID;
+		case 2278: o = Oid.VOIDOID;
+		case 2279: o = Oid.TRIGGEROID;
+		case 3838: o = Oid.EVENT_TRIGGEROID;
+		case 2280: o = Oid.LANGUAGE_HANDLEROID;
+		case 2281: o = Oid.INTERNALOID;
+		case 2283: o = Oid.ANYELEMENTOID;
+		case 2776: o = Oid.ANYNONARRAYOID;
+		case 3500: o = Oid.ANYENUMOID;
+		case 3115: o = Oid.FDW_HANDLEROID;
+		case 325: o = Oid.INDEX_AM_HANDLEROID;
+		case 3310: o = Oid.TSM_HANDLEROID;
+		case 269: o = Oid.TABLE_AM_HANDLEROID;
+		case 3831: o = Oid.ANYRANGEOID;
+		case 5077: o = Oid.ANYCOMPATIBLEOID;
+		case 5078: o = Oid.ANYCOMPATIBLEARRAYOID;
+		case 5079: o = Oid.ANYCOMPATIBLENONARRAYOID;
+		case 5080: o = Oid.ANYCOMPATIBLERANGEOID;
+		case 4537: o = Oid.ANYMULTIRANGEOID;
+		case 4538: o = Oid.ANYCOMPATIBLEMULTIRANGEOID;
+		case 4600: o = Oid.PG_BRIN_BLOOM_SUMMARYOID;
+		case 4601: o = Oid.PG_BRIN_MINMAX_MULTI_SUMMARYOID;
+		case 1000: o = Oid.BOOLARRAYOID;
+		case 1001: o = Oid.BYTEAARRAYOID;
+		case 1002: o = Oid.CHARARRAYOID;
+		case 1003: o = Oid.NAMEARRAYOID;
+		case 1016: o = Oid.INT8ARRAYOID;
+		case 1005: o = Oid.INT2ARRAYOID;
+		case 1006: o = Oid.INT2VECTORARRAYOID;
+		case 1007: o = Oid.INT4ARRAYOID;
+		case 1008: o = Oid.REGPROCARRAYOID;
+		case 1009: o = Oid.TEXTARRAYOID;
+		case 1028: o = Oid.OIDARRAYOID;
+		case 1010: o = Oid.TIDARRAYOID;
+		case 1011: o = Oid.XIDARRAYOID;
+		case 1012: o = Oid.CIDARRAYOID;
+		case 1013: o = Oid.OIDVECTORARRAYOID;
+		case 210: o = Oid.PG_TYPEARRAYOID;
+		case 270: o = Oid.PG_ATTRIBUTEARRAYOID;
+		case 272: o = Oid.PG_PROCARRAYOID;
+		case 273: o = Oid.PG_CLASSARRAYOID;
+		case 199: o = Oid.JSONARRAYOID;
+		case 143: o = Oid.XMLARRAYOID;
+		case 271: o = Oid.XID8ARRAYOID;
+		case 1017: o = Oid.POINTARRAYOID;
+		case 1018: o = Oid.LSEGARRAYOID;
+		case 1019: o = Oid.PATHARRAYOID;
+		case 1020: o = Oid.BOXARRAYOID;
+		case 1027: o = Oid.POLYGONARRAYOID;
+		case 629: o = Oid.LINEARRAYOID;
+		case 1021: o = Oid.FLOAT4ARRAYOID;
+		case 1022: o = Oid.FLOAT8ARRAYOID;
+		case 719: o = Oid.CIRCLEARRAYOID;
+		case 791: o = Oid.MONEYARRAYOID;
+		case 1040: o = Oid.MACADDRARRAYOID;
+		case 1041: o = Oid.INETARRAYOID;
+		case 651: o = Oid.CIDRARRAYOID;
+		case 775: o = Oid.MACADDR8ARRAYOID;
+		case 1034: o = Oid.ACLITEMARRAYOID;
+		case 1014: o = Oid.BPCHARARRAYOID;
+		case 1015: o = Oid.VARCHARARRAYOID;
+		case 1182: o = Oid.DATEARRAYOID;
+		case 1183: o = Oid.TIMEARRAYOID;
+		case 1115: o = Oid.TIMESTAMPARRAYOID;
+		case 1185: o = Oid.TIMESTAMPTZARRAYOID;
+		case 1187: o = Oid.INTERVALARRAYOID;
+		case 1270: o = Oid.TIMETZARRAYOID;
+		case 1561: o = Oid.BITARRAYOID;
+		case 1563: o = Oid.VARBITARRAYOID;
+		case 1231: o = Oid.NUMERICARRAYOID;
+		case 2201: o = Oid.REFCURSORARRAYOID;
+		case 2207: o = Oid.REGPROCEDUREARRAYOID;
+		case 2208: o = Oid.REGOPERARRAYOID;
+		case 2209: o = Oid.REGOPERATORARRAYOID;
+		case 2210: o = Oid.REGCLASSARRAYOID;
+		case 4192: o = Oid.REGCOLLATIONARRAYOID;
+		case 2211: o = Oid.REGTYPEARRAYOID;
+		case 4097: o = Oid.REGROLEARRAYOID;
+		case 4090: o = Oid.REGNAMESPACEARRAYOID;
+		case 2951: o = Oid.UUIDARRAYOID;
+		case 3221: o = Oid.PG_LSNARRAYOID;
+		case 3643: o = Oid.TSVECTORARRAYOID;
+		case 3644: o = Oid.GTSVECTORARRAYOID;
+		case 3645: o = Oid.TSQUERYARRAYOID;
+		case 3735: o = Oid.REGCONFIGARRAYOID;
+		case 3770: o = Oid.REGDICTIONARYARRAYOID;
+		case 3807: o = Oid.JSONBARRAYOID;
+		case 4073: o = Oid.JSONPATHARRAYOID;
+		case 2949: o = Oid.TXID_SNAPSHOTARRAYOID;
+		case 5039: o = Oid.PG_SNAPSHOTARRAYOID;
+		case 3905: o = Oid.INT4RANGEARRAYOID;
+		case 3907: o = Oid.NUMRANGEARRAYOID;
+		case 3909: o = Oid.TSRANGEARRAYOID;
+		case 3911: o = Oid.TSTZRANGEARRAYOID;
+		case 3913: o = Oid.DATERANGEARRAYOID;
+		case 3927: o = Oid.INT8RANGEARRAYOID;
+		case 6150: o = Oid.INT4MULTIRANGEARRAYOID;
+		case 6151: o = Oid.NUMMULTIRANGEARRAYOID;
+		case 6152: o = Oid.TSMULTIRANGEARRAYOID;
+		case 6153: o = Oid.TSTZMULTIRANGEARRAYOID;
+		case 6155: o = Oid.DATEMULTIRANGEARRAYOID;
+		case 6157: o = Oid.INT8MULTIRANGEARRAYOID;
+		case 1263: o = Oid.CSTRINGARRAYOID;
+	}
+	return o;
+}
+
+// Connection Control Functions
+
+extern fn PGconn pq_connectdb(ZString conninfo) @extern("PQconnectdb");
+extern fn void pq_finish(PGconn conn) @extern("PQfinish");
+
+// Connection Status Functions
+
+extern fn ZString pq_db(PGconn conn) @extern("PQdb");
+extern fn ZString pq_user(PGconn conn) @extern("PQuser");
+extern fn ZString pq_pass(PGconn conn) @extern("PQpass");
+extern fn ZString pq_host(PGconn conn) @extern("PQhost");
+extern fn ZString pq_hostaddr(PGconn conn) @extern("PQhostaddr");
+extern fn ZString pq_port(PGconn conn) @extern("PQport");
+extern fn ZString pq_tty(PGconn conn) @extern("PQtty") @deprecated;
+extern fn ZString pq_options(PGconn conn) @extern("PQoptions");
+extern fn ConnStatusType pq_status(PGconn conn) @extern("PQstatus");
+// TODO
+extern fn CInt pq_server_version(PGconn conn) @extern("PQserverVersion");
+extern fn ZString pq_error_message(PGconn conn) @extern("PQerrorMessage");
+// TODO
+
+// Command Execution Functions
+
+extern fn PGresult pq_exec(PGconn conn, ZString command) @extern("PQexec");
+extern fn ExecStatusType pq_result_status(PGresult res) @extern("PQresultStatus");
+extern fn void pq_clear(PGresult res) @extern("PQclear");
+extern fn CInt pq_ntuples(PGresult res) @extern("PQntuples");
+extern fn CInt pq_nfields(PGresult res) @extern("PQnfields");
+extern fn ZString pq_fname(PGresult res, CInt column_number) @extern("PQfname");
+extern fn CInt pq_fnumber(PGresult res, ZString column_name) @extern("PQfnumber");
+extern fn ColumnFormatCode pq_fformat(PGresult res, CInt column_number) @extern("PQfformat");
+extern fn CInt pq_ftype(PGresult res, CInt column_number) @extern("PQftype");
+extern fn ZString pq_getvalue(PGresult res, CInt row_number, CInt column_number) @extern("PQgetvalue");
+extern fn bool pq_getisnull(PGresult res, CInt row_number, CInt column_number) @extern("PQgetisnull");
+extern fn ZString pq_cmd_status(PGresult res) @extern("PQcmdStatus");
+
+// Miscellaneous Functions
+
+extern fn CInt pq_lib_version() @extern("PQlibVersion");
