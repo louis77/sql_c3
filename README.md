@@ -16,20 +16,41 @@ Make sure to change the linker paths in `project.json` to point to your `libpq` 
 
 ## Usage
 
-See the `test/test_sql.c3` file for an example of how to use the `sql` module.
+See the `test/test_sql.c3` file for examples of how to use the `sql` module.
 
 Generally, this is how you would use the `sql` module:
 
-```c3
+```kotlin
 import sql;
 import pg;
 
 fn void main()
 {
+    // First load the driver
     Driver driver = pg::new_postgres();
+
+    // Open a connection
     void* conn = driver.open("postgres://postgres@localhost/postgres");
-    assert(driver.ping(conn) == true);
-    driver.close(conn);
+    defer driver.close(conn); // Make sure connection is always closed
+
+    // Make a simple query
+    String cmd = "SELECT * FROM (VALUES(1, 'hello', null), (2, 'world', null)) AS t(a_num, a_string, a_null)";
+    Result res = conn.query(cmd)!;
+
+    // Call next() to move to next row. Must also be called for the first row
+    while (res.next()) {
+        String a_num;
+        String a_string;
+        String a_null;
+
+        // Scan each column into a variable. At the moment only String is supported.
+        res.scan(0, &a_num)!;
+        res.scan(1, &a_string)!;
+        res.scan(2, &a_null)!;
+    }
+
+    // Free the driver (to make sure all the memory is deallocated)
+    free_postgres();
 }
 ```
 
