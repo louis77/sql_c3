@@ -8,6 +8,7 @@ fault PostgresError
     CONNECTION_FAILURE,
     NOT_IMPLEMENTED,
     COMMAND_FAILED,
+    UNSUPPORTED_SCAN_TYPE,
 }
 
 struct Postgres (sql::Driver) {
@@ -16,7 +17,7 @@ struct Postgres (sql::Driver) {
 
 struct PostgresResult (sql::Result) {
     PGresult result;
-    int current_row; // TODO: Match with maximum size of rows returned by driver
+    int current_row;  // TODO: Match with maximum size of rows returned by driver
     usz row_count;
 }
 
@@ -96,11 +97,25 @@ fn bool PostgresResult.next(PostgresResult* self) @dynamic
     return true;
 }
 
+def StringPtr  = String*;
+def BoolPtr    = bool*;
+def IntPtr     = int*;
+def Int128Ptr  = int128;
+def LongPtr    = long*;
+def ShortPtr   = short*;
+def ICharPtr   = ichar*;
+def UInt128Ptr = uint128;
+def ULongPtr   = ulong*;
+def UIntPtr    = uint*;
+def UShortPtr  = ushort*;
+def CharPtr    = char*;
+def DoublePtr  = double*;
+def FloatPtr   = float*;
+
 fn void! PostgresResult.scan(PostgresResult* self, int fieldnum, any dest) @dynamic
 {
     io::printf("scanning row: %d field: %d\n", self.current_row, fieldnum);
     
-    String* our_dest = (String*)dest;
     bool is_null = pq_getisnull(self.result, self.current_row, fieldnum);
     if (is_null) {
         io::printn("-> was null");
@@ -108,8 +123,52 @@ fn void! PostgresResult.scan(PostgresResult* self, int fieldnum, any dest) @dyna
         return;
     }
 
-    String value = pq_getvalue(self.result, self.current_row, fieldnum).str_view();
-    *our_dest = value.copy();
+    ZString tmp_value = pq_getvalue(self.result, self.current_row, fieldnum);
+
+    // Sadly our driver currently always returns values as string
+    // In the future, we'll use binary data and avoid conversions from string
+    switch (dest) {
+        case String:
+            *dest = tmp_value.str_view().copy();
+        case ZString:
+            *dest = tmp_value;
+        case bool:
+            if (tmp_value == "t") { 
+                *dest = true; 
+            }
+            else { 
+                *dest = false;
+            }
+        case int:
+            *dest = tmp_value.str_view().to_int()!;
+        case int128:
+            *dest = tmp_value.str_view().to_int128()!;
+        case long:
+            *dest = tmp_value.str_view().to_long()!;
+        case short:
+            *dest = tmp_value.str_view().to_short()!;
+        case ichar:
+            *dest = tmp_value.str_view().to_ichar()!;
+        case uint128:
+            *dest = tmp_value.str_view().to_uint128()!;
+        case ulong:
+            *dest = tmp_value.str_view().to_ulong()!;
+        case uint:
+            *dest = tmp_value.str_view().to_uint()!;
+        case ushort:
+            *dest = tmp_value.str_view().to_ushort()!;
+        case char:
+            *dest = tmp_value.str_view().to_uchar()!;
+        case double:
+            *dest = tmp_value.str_view().to_double()!;
+        case float:
+            *dest = tmp_value.str_view().to_float()!;
+        case IntPtr:
+            io::printn("INT POINTER");
+        default:
+            return PostgresError.UNSUPPORTED_SCAN_TYPE?;
+    }
+
     return;
 }
 

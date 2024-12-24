@@ -43,7 +43,7 @@ fn void main()
         String a_string;
         String a_null;
 
-        // Scan each column into a variable. At the moment only String is supported.
+        // Scan each column into a variable.
         res.scan(0, &a_num)!;
         res.scan(1, &a_string)!;
         res.scan(2, &a_null)!;
@@ -53,6 +53,22 @@ fn void main()
     free_postgres();
 }
 ```
+
+### Scanning values
+
+The following types are supported for scanning destinations:
+
+```
+String
+ZString
+bool
+int int128 long short ichar
+uint uint128 ulong ushort char
+double
+float
+```
+
+Other types will currently return a `UNSUPPORTED_SCAN_TYPE` fault.
 
 ## LICENSE
 
