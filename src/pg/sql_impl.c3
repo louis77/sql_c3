@@ -3,16 +3,8 @@ module pg;
 import std::io;
 import sql;
 
-fault PostgresError
-{
-    CONNECTION_FAILURE,
-    NOT_IMPLEMENTED,
-    COMMAND_FAILED,
-    UNSUPPORTED_SCAN_TYPE,
-}
-
 struct Postgres (sql::Driver) {
-    int x;
+    int _x;
 }
 
 struct PostgresResult (sql::Result) {
@@ -24,6 +16,7 @@ struct PostgresResult (sql::Result) {
 struct PostgresConnection (sql::Connection) {
     void* conn;
     String connection_string;
+    String _last_error;
 }
 
 
@@ -60,8 +53,7 @@ fn void! Postgres.ping(Postgres* self, String connection_string) @dynamic
     ConnStatusType dbstatus = pq_status(conn);
     if (dbstatus != CONNECTION_OK)
     {
-        io::printf("-> status: %s\n", dbstatus);
-        return PostgresError.CONNECTION_FAILURE?;
+        return sql::Error.CONNECTION_FAILURE?;
     }
 }
 
@@ -73,7 +65,8 @@ fn sql::Result! PostgresConnection.query(PostgresConnection* self, String comman
     PGresult result = pq_exec(self.conn, (ZString)command);
 
     if (pq_result_status(result) != PGRES_TUPLES_OK) {
-        return PostgresError.COMMAND_FAILED?;
+        self._last_error = pq_result_error_message(result).str_view();
+        return sql::Error.COMMAND_FAILED?;
     }
 
     res.row_count = pq_ntuples(result);
@@ -85,8 +78,28 @@ fn sql::Result! PostgresConnection.query(PostgresConnection* self, String comman
 
 fn usz! PostgresConnection.exec(PostgresConnection* self, String command) @dynamic
 {
-    return 0;
+    PostgresResult* res = mem::new(PostgresResult);
+    PGresult result = pq_exec(self.conn, (ZString)command);
+
+    if (pq_result_status(result) != PGRES_COMMAND_OK) {
+        return sql::Error.COMMAND_FAILED?;
+    }
+
+    ZString affected_rows_str = pq_cmd_tuples(result);
+    usz! affected_rows = (usz)affected_rows_str.str_view().to_ulong();
+    if (catch excuse = affected_rows) {
+        if (excuse == NumberConversion.EMPTY_STRING) return 9;
+    }
+
+    return affected_rows;
 }
+
+fn String PostgresConnection.last_error(PostgresConnection* self) @dynamic
+{
+    return self._last_error;
+}
+
+// Result
 
 fn bool PostgresResult.next(PostgresResult* self) @dynamic 
 {
@@ -97,28 +110,11 @@ fn bool PostgresResult.next(PostgresResult* self) @dynamic
     return true;
 }
 
-def StringPtr  = String*;
-def BoolPtr    = bool*;
-def IntPtr     = int*;
-def Int128Ptr  = int128;
-def LongPtr    = long*;
-def ShortPtr   = short*;
-def ICharPtr   = ichar*;
-def UInt128Ptr = uint128;
-def ULongPtr   = ulong*;
-def UIntPtr    = uint*;
-def UShortPtr  = ushort*;
-def CharPtr    = char*;
-def DoublePtr  = double*;
-def FloatPtr   = float*;
-
 fn void! PostgresResult.scan(PostgresResult* self, int fieldnum, any dest) @dynamic
 {
-    io::printf("scanning row: %d field: %d\n", self.current_row, fieldnum);
-    
     bool is_null = pq_getisnull(self.result, self.current_row, fieldnum);
     if (is_null) {
-        io::printn("-> was null");
+        // TODO : Handle NULL so user knows about it
         dest = null;
         return;
     }
@@ -163,10 +159,9 @@ fn void! PostgresResult.scan(PostgresResult* self, int fieldnum, any dest) @dyna
             *dest = tmp_value.str_view().to_double()!;
         case float:
             *dest = tmp_value.str_view().to_float()!;
-        case IntPtr:
-            io::printn("INT POINTER");
         default:
-            return PostgresError.UNSUPPORTED_SCAN_TYPE?;
+            io::eprintf("scanning faild for row: %d field: %d\n", self.current_row, fieldnum);
+            return sql::Error.UNSUPPORTED_SCAN_TYPE?;
     }
 
     return;

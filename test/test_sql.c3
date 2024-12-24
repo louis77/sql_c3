@@ -84,8 +84,27 @@ fn void! test_malformed_query() @test {
     Result! res = conn.query(cmd);
 
     if (catch excuse = res) {
-          return; // This is what we except
+        // This is what we except
+        String error_message = conn.last_error();
+        assert(error_message.contains("syntax error"), "expected syntax error");
+        return; 
     }
 
     assert(false, "Query should have failed");
+}
+
+
+fn void! test_exec() @test {
+    Driver driver = pg::new_postgres();
+    defer pg::free_postgres(driver);
+
+    Connection conn = driver.open("postgres://postgres@localhost/postgres")!;
+    defer driver.close(conn);
+
+    String cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS test (col INT)`;
+    conn.exec(cmd)!;
+    
+    cmd = `INSERT INTO test VALUES (1), (2), (3)`;
+    usz affected_rows = conn.exec(cmd)!;
+    assert(affected_rows == 3, "Query didn't affect 3 rows");
 }

@@ -492,6 +492,8 @@ extern fn CInt pq_ftype(PGresult res, CInt column_number) @extern("PQftype");
 extern fn ZString pq_getvalue(PGresult res, CInt row_number, CInt column_number) @extern("PQgetvalue");
 extern fn bool pq_getisnull(PGresult res, CInt row_number, CInt column_number) @extern("PQgetisnull");
 extern fn ZString pq_cmd_status(PGresult res) @extern("PQcmdStatus");
+extern fn ZString pq_cmd_tuples(PGresult res) @extern("PQcmdTuples");
+extern fn ZString pq_result_error_message(PGresult res) @extern("PQresultErrorMessage");
 
 // Miscellaneous Functions
 

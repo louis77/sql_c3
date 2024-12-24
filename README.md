@@ -28,10 +28,11 @@ fn void main()
 {
     // First load the driver
     Driver driver = pg::new_postgres();
+    defer pg::free_postgres(driver);
 
     // Open a connection
     void* conn = driver.open("postgres://postgres@localhost/postgres");
-    defer driver.close(conn); // Make sure connection is always closed
+    defer driver.close(conn);
 
     // Make a simple query
     String cmd = "SELECT * FROM (VALUES(1, 'hello', null), (2, 'world', null)) AS t(a_num, a_string, a_null)";
@@ -48,9 +49,38 @@ fn void main()
         res.scan(1, &a_string)!;
         res.scan(2, &a_null)!;
     }
+}
+```
 
-    // Free the driver (to make sure all the memory is deallocated)
-    free_postgres();
+The `sql` package has the following API:
+
+```kotlin
+interface Driver 
+{
+    fn Connection!  open(String connection_string);
+    fn void         close(Connection conn);
+    fn void!        ping(String connection_string);
+} 
+
+interface Connection 
+{
+    fn Result!      query(String command);
+    fn usz!         exec(String command);
+    fn String       last_error();
+}
+
+interface Result 
+{
+    fn bool         next();
+    fn void!        scan(int fieldnum, any dest);
+}
+
+fault Error
+{
+    CONNECTION_FAILURE,
+    NOT_IMPLEMENTED,
+    COMMAND_FAILED,
+    UNSUPPORTED_SCAN_TYPE,
 }
 ```
 
