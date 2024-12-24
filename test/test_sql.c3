@@ -3,7 +3,7 @@ module sql;
 import std::io;
 import pg;
 
- String connection_string = "postgres://postgres@localhost/postgres";
+String connection_string = "postgres://postgres@localhost/postgres";
 
 fn void! test_success() @test {
     Driver driver = pg::new_postgres();

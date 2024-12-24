@@ -16,6 +16,11 @@ Make sure to change the linker paths in `project.json` to point to your `libpq` 
 
 ## Usage
 
+This package contains two modules:
+
+- `sql` The user-facing interface
+- `pg` A driver for PostgreSQL (wraps `libpq`)
+
 See the `test/test_sql.c3` file for examples of how to use the `sql` module.
 
 Generally, this is how you would use the `sql` module:
