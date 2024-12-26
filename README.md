@@ -4,7 +4,7 @@ A C3 SQL package, implementing an interface, types and utilities to handle SQL d
 
 Database drivers can implement the `sql::Driver` interface and register themselves with the `sql` module. The `sql` module can then be used to create a connection and execute queries.
 
-It also contains a simple implementation of drivers for PostgreSQL and MySQL.
+It also contains a simple implementation of drivers for **PostgreSQL**, **MySQL** and **SQLite**.
 
 **This project is WIP, use at your own risk.**
 
@@ -23,11 +23,14 @@ Make sure to change the linker paths in `project.json` to point to your `libpq` 
 
 ## Usage
 
-This package contains two modules:
+This package contains the following modules:
 
 - `sql` The user-facing interface
-- `pg` A driver for PostgreSQL (wraps `libpq`)
-- `mysql8` A driver for MySQL 8.x (wraps `mysql-client@8`)
+- `pg` Driver for PostgreSQL (based on `libpq`)
+- `mysql8` Driver for MySQL 8.x (based on `mysql-client@8`)
+- `sqlite` Driver for SQLite 3 (basen on `sqlite`)
+
+The drivers are bindings for the respective databases. They can be used separately, if you want low-level access to the database system. Though, at the moment, the drivers are not complete, bindings might be missing. **Contributions are welcome**!
 
 Generally, this is how you would use the `sql` module:
 
@@ -51,9 +54,9 @@ fn void main()
 
     // Call next() to move to next row. Must also be called for the first row
     while (res.next()) {
-        String a_num;
+        int a_num;
         String a_string;
-        String a_null;
+        int* a_null; // supports checking for NULL
 
         // Scan each column into a variable.
         res.scan(0, &a_num)!;

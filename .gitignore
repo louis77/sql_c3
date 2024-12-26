@@ -2,3 +2,5 @@ build
 *.code-workspace
 pg.h
 *.h
+.DS_Store
+test.sqlite

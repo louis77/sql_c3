@@ -1,21 +1,22 @@
-module sql;
+module pg_test @test;
 
 import std::io;
 import pg;
+import sql;
 
 String connection_string = "postgres://postgres@localhost/postgres";
 
-fn void! test_pg_success() @test {
+fn void! test_pg_success() {
     Driver driver = pg::new_driver();
     defer pg::free_driver(driver);
 
-    Connection conn = driver.open(connection_string)!;
+    sql::Connection conn = driver.open(connection_string)!;
     defer driver.close(conn);
 
     driver.ping(conn)!;
 }
 
-fn void! test_pg_fail() @test {
+fn void! test_pg_fail() {
     String connection_string = "postgres://postgres@THISISWRONG/postgres";
 
     Driver driver = pg::new_driver();
@@ -31,7 +32,7 @@ fn void! test_pg_fail() @test {
     assert(false, "Connection should have failed");
 }
 
-fn void! test_pg_query() @test {
+fn void! test_pg_query() {
     Driver driver = pg::new_driver();
     defer pg::free_driver(driver);
 
@@ -76,7 +77,7 @@ fn void! test_pg_query() @test {
     assert(count == 2, "Should have fetched one row");
 }
 
-fn void! test_pg_malformed_query() @test {
+fn void! test_pg_malformed_query() {
     Driver driver = pg::new_driver();
     defer pg::free_driver(driver);
 
@@ -97,7 +98,7 @@ fn void! test_pg_malformed_query() @test {
 }
 
 
-fn void! test_pg_exec() @test {
+fn void! test_pg_exec() {
     Driver driver = pg::new_driver();
     defer pg::free_driver(driver);
 

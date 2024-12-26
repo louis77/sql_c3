@@ -1,10 +1,10 @@
-module pg;
+module pg @test;
 
 import std::io;
 
 ZString connection_string = "postgres://postgres@localhost/postgres";
 
-fn void! test_all() @test
+fn void! test_all() 
 {
 	CInt libversion = pq_lib_version();
     assert(libversion > 0, "Lib version should be greater than 0");
@@ -70,7 +70,7 @@ fn void! test_all() @test
 	pq_finish(conn);
 }
 
-fn void! test_cmd_tuples() @test
+fn void! test_cmd_tuples() 
 {
 	PGconn conn = pq_connectdb(connection_string);
 	ConnStatusType dbstatus = pq_status(conn);

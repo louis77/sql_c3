@@ -3,9 +3,7 @@
   "warnings": [
     "no-unused"
   ],
-  "dependency-search-paths": [
-    "lib"
-  ],
+  "dependency-search-paths": [],
   "dependencies": [],
   "authors": [
     "Louis Brauer <louis@brauer.family>"
@@ -18,11 +16,13 @@
   ],
   "linked-libraries": [
     "pq",
-    "mysqlclient"
+    "mysqlclient",
+    "sqlite3"
   ],
   "linker-search-paths": [
     "/opt/homebrew/Cellar/libpq/17.2/lib/",
-    "/opt/homebrew/Cellar/mysql-client@8.0/8.0.40/lib/"
+    "/opt/homebrew/Cellar/mysql-client@8.0/8.0.40/lib/",
+    "/opt/homebrew/Cellar/sqlite/3.47.2/lib/"
   ],
   "output": "build",
   "targets": {

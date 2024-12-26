@@ -111,7 +111,7 @@ fn bool PostgresResult.next(PostgresResult* self) @dynamic
     return true;
 }
 
-macro @set_null_value(dest, #value, was_null) 
+macro @set_null_value(dest, #value, was_null) @private
 {
     if (was_null) { 
         *dest = null; 

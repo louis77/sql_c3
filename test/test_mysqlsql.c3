@@ -1,4 +1,4 @@
-module mysql_test @test;
+module mysql8_test @test;
 
 import std::io;
 import mysql8;
@@ -13,7 +13,7 @@ fn void! test_mysql_success() {
     defer mysql8::free_driver(driver);
 
     sql::Connection conn = driver.open(connection_string)!;
-    defer driver.close(conn);
+    defer try driver.close(conn);
 
     driver.ping(conn)!;
 //};
@@ -24,7 +24,7 @@ fn void! test_mysql_query() {
     defer mysql8::free_driver(driver);
 
     sql::Connection conn = driver.open(connection_string)!;
-    defer driver.close(conn);
+    defer try driver.close(conn);
 
 
     String cmd = `SELECT 1 as an_int, 'hello' as a_string, TRUE as a_bool, null as a_null 
