@@ -10,12 +10,15 @@ It also contains a simple implementation of drivers for PostgreSQL and MySQL.
 
 ## Installing
 
-- Clone the following dependencies: 
-  - [url_c3](https://github.com/louis77/url_c3)
-- Clone the repository and modify `project.json` to include paths to the dependencies
-- Execute `c3c test` to run tests
+- Clone the repository (with submodules to also get dependencies) and run the tests:
 
-Make sure to change the linker paths in `project.json` to point to your `libpq` installation.
+```sh
+git clone --recurse-submodules https://github.com/louis77/sql_c3
+cd sql_c3
+c3c test
+```
+
+Make sure to change the linker paths in `project.json` to point to your `libpq` and `mysql-client` installation.
 
 
 ## Usage
@@ -60,7 +63,7 @@ fn void main()
 }
 ```
 
-See the [test/test_sql.c3](test/test_sql.c3) file for examples of how to use the `sql` module.
+See the [test](test) folder for examples of how to use the `sql` module.
 
 
 The `sql` package has the following API:
@@ -131,15 +134,15 @@ Currently supported:
 - [x] Execution of Queries and Statements
 - [x] Scanning of result values into all supported C3 types
 
-Not implemented yet:
+In progress:
 
 - [ ] Proper memory handling
-- [ ] No support for prepared statements
-- [ ] No support for transactions
-- [ ] No support for connection pooling
-- [ ] No support for parameterized queries
-- [ ] No support for named parameters
-- [ ] No support for multiple result sets
+- [ ] prepared statements
+- [ ] Transactions
+- [ ] Connection pooling
+- [ ] Parameterized queries
+- [ ] Named parameters
+- [ ] Multiple result sets
 
 
 ## LICENSE

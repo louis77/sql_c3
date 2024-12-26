@@ -1,0 +1,3 @@
+[submodule "vendor/url_c3"]
+	path = vendor/url_c3
+	url = https://github.com/louis77/url_c3
