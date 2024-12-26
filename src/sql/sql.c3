@@ -8,7 +8,7 @@ interface Driver
 {
     fn Connection!  open(String connection_string);
     fn void         close(Connection conn);
-    fn void!        ping(String connection_string); // Not sure if this shouldn't rather take a Connection instead
+    fn void!        ping(Connection conn);
 } 
 
 <*

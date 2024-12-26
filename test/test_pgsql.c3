@@ -12,7 +12,7 @@ fn void! test_pg_success() @test {
     Connection conn = driver.open(connection_string)!;
     defer driver.close(conn);
 
-    driver.ping(connection_string)!;
+    driver.ping(conn)!;
 }
 
 fn void! test_pg_fail() @test {
@@ -21,7 +21,10 @@ fn void! test_pg_fail() @test {
     Driver driver = pg::new_driver();
     defer pg::free_driver(driver);
 
-    if (catch error = driver.ping(connection_string)) {
+    Connection conn = driver.open(connection_string)!;
+    defer driver.close(conn);
+
+    if (catch error = driver.ping(conn)) {
         return; // This is what we expect
     }
 
@@ -48,7 +51,7 @@ fn void! test_pg_query() @test {
         String a_string;
         ZString a_zstring;
         String a_bool;
-        String a_null;
+        int* a_null;
         res.scan(0, &a_num)!;
         res.scan(1, &a_string)!;
         res.scan(1, &a_zstring)!;
@@ -59,14 +62,14 @@ fn void! test_pg_query() @test {
             assert(a_string == "hello", "a_string should be 'hello'");
             assert(a_zstring.str_view() == "hello", "a_zstring should be 'hello'");
             assert(a_bool == "t", "a_bool should be 'true'");
-            assert(a_null == "", "a_null should be null");
+            assert(a_null == null, "a_null should be null");
         } 
         if (count == 2) {
             assert(a_num == 2, "a_num should be 2");
             assert(a_string == "world", "a_string should be 'world'");
             assert(a_zstring.str_view() == "world", "a_zstring should be 'world'");
             assert(a_bool == "f", "a_bool should be 'false'");
-            assert(a_null == "", "a_null should be null");
+            assert(a_null == null, "a_null should be null");
         }
     }
 

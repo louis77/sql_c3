@@ -47,10 +47,11 @@ fn void Postgres.close(Postgres* self, sql::Connection conn) @dynamic
     pq_finish(c.conn);
 }
 
-fn void! Postgres.ping(Postgres* self, String connection_string) @dynamic
+fn void! Postgres.ping(Postgres* self, sql::Connection conn) @dynamic
 {	
-    PGconn conn = pq_connectdb((ZString)connection_string);
-    ConnStatusType dbstatus = pq_status(conn);
+    PostgresConnection* c = (PostgresConnection*)conn;
+    PGconn tmp_conn = pq_connectdb((ZString)c.connection_string);
+    ConnStatusType dbstatus = pq_status(tmp_conn);
     if (dbstatus != CONNECTION_OK)
     {
         return sql::Error.CONNECTION_FAILURE?;
@@ -88,7 +89,7 @@ fn usz! PostgresConnection.exec(PostgresConnection* self, String command) @dynam
     ZString affected_rows_str = pq_cmd_tuples(result);
     usz! affected_rows = (usz)affected_rows_str.str_view().to_ulong();
     if (catch excuse = affected_rows) {
-        if (excuse == NumberConversion.EMPTY_STRING) return 9;
+        if (excuse == NumberConversion.EMPTY_STRING) return 0;
     }
 
     return affected_rows;
@@ -110,55 +111,86 @@ fn bool PostgresResult.next(PostgresResult* self) @dynamic
     return true;
 }
 
+macro @set_null_value(dest, #value, was_null) 
+{
+    if (was_null) { 
+        *dest = null; 
+    } else { 
+        **dest = #value; 
+    }
+}
+
 fn void! PostgresResult.scan(PostgresResult* self, int fieldnum, any dest) @dynamic
 {
-    bool is_null = pq_getisnull(self.result, self.current_row, fieldnum);
-    if (is_null) {
-        // TODO : Handle NULL so user knows about it
-        dest = null;
-        return;
-    }
-
     ZString tmp_value = pq_getvalue(self.result, self.current_row, fieldnum);
+    bool was_null = pq_getisnull(self.result, self.current_row, fieldnum);
+    if (was_null) {
+        tmp_value = "";
+    }
 
     // Sadly our driver currently always returns values as string
     // In the future, we'll use binary data and avoid conversions from string
     switch (dest) {
         case String:
             *dest = tmp_value.str_view().copy();
+        case String*:
+            @set_null_value(dest, tmp_value.str_view().copy(), was_null);
         case ZString:
             *dest = tmp_value;
+        case ZString*:
+            @set_null_value(dest, tmp_value, was_null);
         case bool:
-            if (tmp_value == "t") { 
-                *dest = true; 
-            }
-            else { 
-                *dest = false;
-            }
+            *dest = tmp_value.str_view() == "t" ? true : false;
+        case bool*:
+            @set_null_value(dest, (tmp_value.str_view() == "t") ? true : false, was_null);
         case int:
             *dest = tmp_value.str_view().to_int()!;
+        case int*:
+            @set_null_value(dest, tmp_value.str_view().to_int()!, was_null);
         case int128:
             *dest = tmp_value.str_view().to_int128()!;
+        case int128*:
+            @set_null_value(dest, tmp_value.str_view().to_int128()!, was_null);
         case long:
             *dest = tmp_value.str_view().to_long()!;
+        case long*:
+            @set_null_value(dest, tmp_value.str_view().to_long()!, was_null);        
         case short:
             *dest = tmp_value.str_view().to_short()!;
+        case short*:
+            @set_null_value(dest, tmp_value.str_view().to_short()!, was_null);        
         case ichar:
             *dest = tmp_value.str_view().to_ichar()!;
+        case ichar*:
+            @set_null_value(dest, tmp_value.str_view().to_ichar()!, was_null);        
         case uint128:
             *dest = tmp_value.str_view().to_uint128()!;
+        case uint128*:
+            @set_null_value(dest, tmp_value.str_view().to_uint128()!, was_null);        
         case ulong:
             *dest = tmp_value.str_view().to_ulong()!;
+        case ulong*:
+            @set_null_value(dest, tmp_value.str_view().to_ulong()!, was_null);        
         case uint:
             *dest = tmp_value.str_view().to_uint()!;
+        case uint*:
+            @set_null_value(dest, tmp_value.str_view().to_uint()!, was_null);        
         case ushort:
             *dest = tmp_value.str_view().to_ushort()!;
+        case ushort*:
+            @set_null_value(dest, tmp_value.str_view().to_ushort()!, was_null);        
         case char:
             *dest = tmp_value.str_view().to_uchar()!;
+        case char*:
+            @set_null_value(dest, tmp_value.str_view().to_uchar()!, was_null);        
         case double:
             *dest = tmp_value.str_view().to_double()!;
+        case double*:
+            @set_null_value(dest, tmp_value.str_view().to_double()!, was_null);        
         case float:
             *dest = tmp_value.str_view().to_float()!;
+        case float*:
+            @set_null_value(dest, tmp_value.str_view().to_float()!, was_null);   
         default:
             io::eprintf("scanning faild for row: %d field: %d\n", self.current_row, fieldnum);
             return sql::Error.UNSUPPORTED_SCAN_TYPE?;

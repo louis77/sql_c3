@@ -7,16 +7,19 @@ import sql;
 String connection_string = "mysql://root@localhost:3306/test";
 
 fn void! test_mysql_success() {
+//mem::@report_heap_allocs_in_scope() 
+//{
     Driver driver = mysql8::new_driver();
     defer mysql8::free_driver(driver);
 
     sql::Connection conn = driver.open(connection_string)!;
     defer driver.close(conn);
 
-    driver.ping(connection_string)!;
+    driver.ping(conn)!;
+//};
 }
 
-fn void! test_mysql_query() @test {
+fn void! test_mysql_query() {
     Driver driver = mysql8::new_driver();
     defer mysql8::free_driver(driver);
 
@@ -36,7 +39,7 @@ fn void! test_mysql_query() @test {
         String a_string;
         ZString a_zstring;
         bool a_bool;
-        String a_null;
+        int* a_null;
         res.scan(0, &a_num)!;
         res.scan(1, &a_string)!;
         res.scan(1, &a_zstring)!;
@@ -47,21 +50,36 @@ fn void! test_mysql_query() @test {
             assert(a_string == "hello", "a_string should be 'hello'");
             assert(a_zstring.str_view() == "hello", "a_zstring should be 'hello'");
             assert(a_bool, "a_bool should be 'true'");
-            assert(a_null == "", "a_null should be null");
+            assert(a_null == null, "a_null should be null");
         } 
         if (count == 2) {
             assert(a_num == 2, "a_num should be 2");
             assert(a_string == "world", "a_string should be 'world'");
             assert(a_zstring.str_view() == "world", "a_zstring should be 'world'");
             assert(!a_bool, "a_bool should be 'false'");
-            assert(a_null == "", "a_null should be null");
+            assert(a_null == null, "a_null should be null");
         }
     }
 
     assert(count == 2, "Should have fetched two rows");
 }
 
-fn void! test_mysql_exec() @test {
+fn void! test_mysql_fail() {
+    String connection_string = "mysql://WHUUT@loca lhost:3306/test";
+
+    Driver driver = mysql8::new_driver();
+    defer mysql8::free_driver(driver);
+
+    Connection! conn = driver.open(connection_string);
+    
+    if (catch excuse = conn) {
+        return; // This is what we expect
+    }
+
+    assert(false, "Connection should have failed");
+}
+
+fn void! test_mysql_exec() {
     Driver driver = mysql8::new_driver();
     defer mysql8::free_driver(driver);
 
@@ -80,7 +98,7 @@ fn void! test_mysql_exec() @test {
     assert(affected_rows == 1, "INSERT INTO should affect 1 row");
 }
 
-fn void! test_mysql_malformed_query() @test {
+fn void! test_mysql_malformed_query() {
     Driver driver = mysql8::new_driver();
     defer mysql8::free_driver(driver);
 

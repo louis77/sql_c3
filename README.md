@@ -70,7 +70,7 @@ interface Driver
 {
     fn Connection!  open(String connection_string);
     fn void         close(Connection conn);
-    fn void!        ping(String connection_string);
+    fn void!        ping(Connection conn);
 } 
 
 interface Connection 
@@ -107,7 +107,17 @@ int int128 long short ichar
 uint uint128 ulong ushort char
 double
 float
+
+String*
+ZString*
+bool*
+int* int128* long* short* ichar*
+uint* uint128* ulong* ushort* char*
+double*
+float*
 ```
+
+If you scan into a pointer type, it will be set to `null` if the result was SQL `NULL`. Otherwise `NULL` will scan into an empty value.
 
 Other types will currently return a `UNSUPPORTED_SCAN_TYPE` fault.
 

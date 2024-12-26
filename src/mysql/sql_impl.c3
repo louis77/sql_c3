@@ -40,9 +40,19 @@ fn sql::Connection! MysqlDriver.open(MysqlDriver* self, String connection_string
     Url db_url = url::parse(connection_string)!;
     if (db_url.port == 0) db_url.port = 3306;
 
+    ZString host = db_url.host.zstr_copy();
+    ZString user = db_url.username.zstr_copy();
+    ZString pass = db_url.password.zstr_copy();
+    ZString name = db_url.path[1 .. ].zstr_copy();
+    defer {
+        mem::free(host);
+        mem::free(user);
+        mem::free(pass);
+        mem::free(name);
+    }
+
     Mysql mysql = mysql_init(null);
-    Mysql mysql2 = mysql_real_connect(mysql, db_url.host.zstr_copy(), db_url.username.zstr_copy(), db_url.password.zstr_copy(), db_url.path[1 .. ].zstr_copy(), db_url.port, null, 0);
-    
+    Mysql mysql2 = mysql_real_connect(mysql, host, user, pass, name, db_url.port, null, 0);
     if (mysql2 == null) {
         return sql::Error.CONNECTION_FAILURE?;
     }
@@ -60,19 +70,10 @@ fn void MysqlDriver.close(MysqlDriver* self, sql::Connection conn) @dynamic
     mysql_close(c.conn);
 }
 
-fn void! MysqlDriver.ping(MysqlDriver* self, String connection_string) @dynamic
+fn void! MysqlDriver.ping(MysqlDriver* self, sql::Connection conn) @dynamic
 {
-    Url db_url = url::parse(connection_string)!;
-    if (db_url.port == 0) db_url.port = 3306;
-
-    Mysql mysql = mysql_init(null);
-    Mysql mysql2 = mysql_real_connect(mysql, db_url.host.zstr_copy(), db_url.username.zstr_copy(), db_url.password.zstr_copy(), db_url.path[1 .. ].zstr_copy(), db_url.port, null, 0);
-    
-    if (mysql2 == null) {
-        return sql::Error.CONNECTION_FAILURE?;
-    }
-
-    if (mysql_ping(mysql) != 0) {
+    MysqlConnection* c = (MysqlConnection*)conn;
+    if (mysql_ping(c.conn) != 0) {
         return sql::Error.CONNECTION_FAILURE?;
     }     
     return;
@@ -134,6 +135,15 @@ fn bool MysqlResult.next(MysqlResult* self) @dynamic
     return true;
 }
 
+macro @set_null_value(dest, #value, was_null) 
+{
+    if (was_null) { 
+        *dest = null; 
+    } else { 
+        **dest = #value; 
+    }
+}
+
 fn void! MysqlResult.scan(MysqlResult* self, int fieldnum, any dest) @dynamic
 {   
     if (fieldnum+1 > self.num_fields) {
@@ -141,47 +151,72 @@ fn void! MysqlResult.scan(MysqlResult* self, int fieldnum, any dest) @dynamic
     }
 
     ZString tmp_value = (ZString)self.current_row[fieldnum];
-    if (tmp_value == null) {
+    bool was_null = (tmp_value == null);
+    if (was_null) {
         tmp_value = "";
-        return;
     }
 
     switch (dest) {
         case String:
             *dest = tmp_value.str_view().copy();
+        case String*:
+            @set_null_value(dest, tmp_value.str_view().copy(), was_null);
         case ZString:
             *dest = tmp_value;
+        case ZString*:
+            @set_null_value(dest, tmp_value, was_null);
         case bool:
-            if (tmp_value.str_view() == "1") { 
-                *dest = true; 
-            }
-            else { 
-                *dest = false;
-            }
+            *dest = tmp_value.str_view() == "1" ? true : false; 
+        case bool*:
+            @set_null_value(dest, (tmp_value.str_view() == "1") ? true : false, was_null);
         case int:
             *dest = tmp_value.str_view().to_int()!;
+        case int*:
+            @set_null_value(dest, tmp_value.str_view().to_int()!, was_null);
         case int128:
             *dest = tmp_value.str_view().to_int128()!;
+        case int128*:
+            @set_null_value(dest, tmp_value.str_view().to_int128()!, was_null);
         case long:
             *dest = tmp_value.str_view().to_long()!;
+        case long*:
+            @set_null_value(dest, tmp_value.str_view().to_long()!, was_null);        
         case short:
             *dest = tmp_value.str_view().to_short()!;
+        case short*:
+            @set_null_value(dest, tmp_value.str_view().to_short()!, was_null);        
         case ichar:
             *dest = tmp_value.str_view().to_ichar()!;
+        case ichar*:
+            @set_null_value(dest, tmp_value.str_view().to_ichar()!, was_null);        
         case uint128:
             *dest = tmp_value.str_view().to_uint128()!;
+        case uint128*:
+            @set_null_value(dest, tmp_value.str_view().to_uint128()!, was_null);        
         case ulong:
             *dest = tmp_value.str_view().to_ulong()!;
+        case ulong*:
+            @set_null_value(dest, tmp_value.str_view().to_ulong()!, was_null);        
         case uint:
             *dest = tmp_value.str_view().to_uint()!;
+        case uint*:
+            @set_null_value(dest, tmp_value.str_view().to_uint()!, was_null);        
         case ushort:
             *dest = tmp_value.str_view().to_ushort()!;
+        case ushort*:
+            @set_null_value(dest, tmp_value.str_view().to_ushort()!, was_null);        
         case char:
             *dest = tmp_value.str_view().to_uchar()!;
+        case char*:
+            @set_null_value(dest, tmp_value.str_view().to_uchar()!, was_null);        
         case double:
             *dest = tmp_value.str_view().to_double()!;
+        case double*:
+            @set_null_value(dest, tmp_value.str_view().to_double()!, was_null);        
         case float:
             *dest = tmp_value.str_view().to_float()!;
+        case float*:
+            @set_null_value(dest, tmp_value.str_view().to_float()!, was_null);        
         default:
             io::eprintf("scanning faild for row: %d field: %d\n", self.current_row, fieldnum);
             return sql::Error.UNSUPPORTED_SCAN_TYPE?;
