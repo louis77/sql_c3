@@ -6,8 +6,8 @@ import pg;
 String connection_string = "postgres://postgres@localhost/postgres";
 
 fn void! test_pg_success() @test {
-    Driver driver = pg::new_postgres();
-    defer pg::free_postgres(driver);
+    Driver driver = pg::new_driver();
+    defer pg::free_driver(driver);
 
     Connection conn = driver.open(connection_string)!;
     defer driver.close(conn);
@@ -18,8 +18,8 @@ fn void! test_pg_success() @test {
 fn void! test_pg_fail() @test {
     String connection_string = "postgres://postgres@THISISWRONG/postgres";
 
-    Driver driver = pg::new_postgres();
-    defer pg::free_postgres(driver);
+    Driver driver = pg::new_driver();
+    defer pg::free_driver(driver);
 
     if (catch error = driver.ping(connection_string)) {
         return; // This is what we expect
@@ -29,8 +29,8 @@ fn void! test_pg_fail() @test {
 }
 
 fn void! test_pg_query() @test {
-    Driver driver = pg::new_postgres();
-    defer pg::free_postgres(driver);
+    Driver driver = pg::new_driver();
+    defer pg::free_driver(driver);
 
     Connection conn = driver.open("postgres://postgres@localhost/postgres")!;
     defer driver.close(conn);
@@ -74,8 +74,8 @@ fn void! test_pg_query() @test {
 }
 
 fn void! test_pg_malformed_query() @test {
-    Driver driver = pg::new_postgres();
-    defer pg::free_postgres(driver);
+    Driver driver = pg::new_driver();
+    defer pg::free_driver(driver);
 
     Connection conn = driver.open("postgres://postgres@localhost/postgres")!;
     defer driver.close(conn);
@@ -95,8 +95,8 @@ fn void! test_pg_malformed_query() @test {
 
 
 fn void! test_pg_exec() @test {
-    Driver driver = pg::new_postgres();
-    defer pg::free_postgres(driver);
+    Driver driver = pg::new_driver();
+    defer pg::free_driver(driver);
 
     Connection conn = driver.open("postgres://postgres@localhost/postgres")!;
     defer driver.close(conn);

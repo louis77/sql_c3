@@ -20,14 +20,14 @@ struct PostgresConnection (sql::Connection) {
 }
 
 
-fn Postgres* new_postgres() {
+fn Postgres* new_driver() {
     Postgres* pg = mem::new(Postgres);
     return pg;
 }
 
 // Driver
 
-fn void free_postgres(Driver pg) {
+fn void free_driver(Driver pg) {
     // TODO: Call Postgres destructor
     free((Postgres*)pg);
 }

@@ -66,7 +66,7 @@ extern fn void          mysql_library_end() @extern("mysql_server_end");
 extern fn CInt          mysql_library_init(CInt argc, void* argv, void* groups) @extern("mysql_server_init");
 extern fn CUInt         mysql_num_fields(MysqlRes *result);
 extern fn CInt          mysql_options(Mysql *mysql, MysqlOption option, void *arg);
+extern fn CInt          mysql_ping(Mysql mysql);
 extern fn Mysql         mysql_real_connect(Mysql mysql, ZString host, ZString user, ZString passwd, ZString db, CUInt port, ZString unix_socket, CULong client_flag);
 extern fn CInt          mysql_real_query(Mysql mysql, ZString stmt_str, CULong length);
 extern fn MysqlRes      mysql_use_result(Mysql *mysql);
-extern fn CInt          mysql_ping(Mysql mysql);

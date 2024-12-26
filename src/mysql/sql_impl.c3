@@ -21,7 +21,7 @@ struct MysqlConnection (sql::Connection) {
     String _last_error;
 }
 
-fn MysqlDriver* new_mysql() {
+fn MysqlDriver* new_driver() {
     mysql_library_init(0, null, null); // TODO should we check for the return value?
     
     MysqlDriver* db = mem::new(MysqlDriver);
@@ -30,7 +30,7 @@ fn MysqlDriver* new_mysql() {
 
 // Driver
 
-fn void free_mysql(Driver db) {
+fn void free_driver(Driver db) {
     mysql_library_end();
     free((MysqlDriver*)db);
 }
@@ -85,6 +85,8 @@ fn sql::Result! MysqlConnection.query(MysqlConnection* self, String command) @dy
     CInt success = mysql_real_query(self.conn, (ZString)command, command.len);
 
     if (success != 0) {
+        self._last_error = mysql_error(self.conn).str_view();
+
         return sql::Error.COMMAND_FAILED?;
     }
 
@@ -99,7 +101,17 @@ fn sql::Result! MysqlConnection.query(MysqlConnection* self, String command) @dy
 
 fn usz! MysqlConnection.exec(MysqlConnection* self, String command) @dynamic
 {
-    return sql::Error.NOT_IMPLEMENTED?;
+    CInt success = mysql_real_query(self.conn, (ZString)command, command.len);
+
+    if (success != 0) {
+        return sql::Error.COMMAND_FAILED?;
+    }
+
+    CULong affected_rows = mysql_affected_rows(self.conn);
+    if (affected_rows == (ulong)-1) return 0;
+    // TODO Should probably throw an error;
+
+    return (usz)affected_rows;
 }
 
 fn String MysqlConnection.last_error(MysqlConnection* self) @dynamic
@@ -180,6 +192,6 @@ fn void! MysqlResult.scan(MysqlResult* self, int fieldnum, any dest) @dynamic
 
 fn void! MysqlResult.close(MysqlResult* self) @dynamic
 {
-    mem::free(self);
+    mysql_free_result(self.result);
     return;
 }

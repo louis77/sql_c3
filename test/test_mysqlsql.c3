@@ -7,8 +7,8 @@ import sql;
 String connection_string = "mysql://root@localhost:3306/test";
 
 fn void! test_mysql_success() {
-    Driver driver = mysql8::new_mysql();
-    defer mysql8::free_mysql(driver);
+    Driver driver = mysql8::new_driver();
+    defer mysql8::free_driver(driver);
 
     sql::Connection conn = driver.open(connection_string)!;
     defer driver.close(conn);
@@ -17,8 +17,8 @@ fn void! test_mysql_success() {
 }
 
 fn void! test_mysql_query() @test {
-    Driver driver = mysql8::new_mysql();
-    defer mysql8::free_mysql(driver);
+    Driver driver = mysql8::new_driver();
+    defer mysql8::free_driver(driver);
 
     sql::Connection conn = driver.open(connection_string)!;
     defer driver.close(conn);
@@ -59,4 +59,43 @@ fn void! test_mysql_query() @test {
     }
 
     assert(count == 2, "Should have fetched two rows");
+}
+
+fn void! test_mysql_exec() @test {
+    Driver driver = mysql8::new_driver();
+    defer mysql8::free_driver(driver);
+
+    sql::Connection conn = driver.open(connection_string)!;
+    defer driver.close(conn);
+
+    String cmd = `DROP TABLE test`;
+    conn.exec(cmd)!;
+
+    cmd = `CREATE TABLE test (x INT)`;
+    usz affected_rows = conn.exec(cmd) ?? 0;
+    assert(affected_rows == 0, "CREATE TABLE should not affect any rows");
+
+    cmd = `INSERT INTO test VALUES (1)`;
+    affected_rows = conn.exec(cmd) ?? 0;
+    assert(affected_rows == 1, "INSERT INTO should affect 1 row");
+}
+
+fn void! test_mysql_malformed_query() @test {
+    Driver driver = mysql8::new_driver();
+    defer mysql8::free_driver(driver);
+
+    sql::Connection conn = driver.open(connection_string)!;
+    defer driver.close(conn);
+
+    String cmd = `SELECT * FR OM what?`;
+    Result! res = conn.query(cmd);
+
+    if (catch excuse = res) {
+        // This is what we except
+        String error_message = conn.last_error();
+        assert(error_message.contains("error in your SQL syntax"), "expected syntax error, got '%s'", error_message);
+        return; 
+    }
+
+    assert(false, "Query should have failed");
 }

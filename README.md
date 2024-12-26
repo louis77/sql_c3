@@ -18,14 +18,13 @@ It also contains a simple implementation of drivers for PostgreSQL and MySQL.
 Make sure to change the linker paths in `project.json` to point to your `libpq` installation.
 
 
-
 ## Usage
 
 This package contains two modules:
 
 - `sql` The user-facing interface
 - `pg` A driver for PostgreSQL (wraps `libpq`)
-- `mysql8` A driver for MySQL 8.x (wraps `mysql-client@8`) [*not fully implemented yet*]
+- `mysql8` A driver for MySQL 8.x (wraps `mysql-client@8`)
 
 Generally, this is how you would use the `sql` module:
 
@@ -36,8 +35,8 @@ import pg;
 fn void main()
 {
     // First load the driver
-    Driver driver = pg::new_postgres();
-    defer pg::free_postgres(driver);
+    Driver driver = pg::new_driver();
+    defer pg::free_driver(driver);
 
     // Open a connection
     void* conn = driver.open("postgres://postgres@localhost/postgres");
@@ -124,6 +123,7 @@ Currently supported:
 
 Not implemented yet:
 
+- [ ] Proper memory handling
 - [ ] No support for prepared statements
 - [ ] No support for transactions
 - [ ] No support for connection pooling
