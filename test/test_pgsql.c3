@@ -5,7 +5,7 @@ import pg;
 
 String connection_string = "postgres://postgres@localhost/postgres";
 
-fn void! test_success() @test {
+fn void! test_pg_success() @test {
     Driver driver = pg::new_postgres();
     defer pg::free_postgres(driver);
 
@@ -15,7 +15,7 @@ fn void! test_success() @test {
     driver.ping(connection_string)!;
 }
 
-fn void! test_fail() @test {
+fn void! test_pg_fail() @test {
     String connection_string = "postgres://postgres@THISISWRONG/postgres";
 
     Driver driver = pg::new_postgres();
@@ -28,7 +28,7 @@ fn void! test_fail() @test {
     assert(false, "Connection should have failed");
 }
 
-fn void! test_query() @test {
+fn void! test_pg_query() @test {
     Driver driver = pg::new_postgres();
     defer pg::free_postgres(driver);
 
@@ -73,7 +73,7 @@ fn void! test_query() @test {
     assert(count == 2, "Should have fetched one row");
 }
 
-fn void! test_malformed_query() @test {
+fn void! test_pg_malformed_query() @test {
     Driver driver = pg::new_postgres();
     defer pg::free_postgres(driver);
 
@@ -94,7 +94,7 @@ fn void! test_malformed_query() @test {
 }
 
 
-fn void! test_exec() @test {
+fn void! test_pg_exec() @test {
     Driver driver = pg::new_postgres();
     defer pg::free_postgres(driver);
 

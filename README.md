@@ -4,15 +4,20 @@ A C3 SQL package, implementing an interface, types and utilities to handle SQL d
 
 Database drivers can implement the `sql::Driver` interface and register themselves with the `sql` module. The `sql` module can then be used to create a connection and execute queries.
 
-It also contains a simple implementation of a Driver for PostgreSQL (which is a wrapper around the libpq library).
+It also contains a simple implementation of drivers for PostgreSQL and MySQL.
 
 **This project is WIP, use at your own risk.**
 
 ## Installing
 
-Clone the repository and run `c3c build`. Run `c3c test` to run tests.
+- Clone the following dependencies: 
+  - [url_c3](https://github.com/louis77/url_c3)
+- Clone the repository and modify `project.json` to include paths to the dependencies
+- Execute `c3c test` to run tests
 
 Make sure to change the linker paths in `project.json` to point to your `libpq` installation.
+
+
 
 ## Usage
 
@@ -20,8 +25,7 @@ This package contains two modules:
 
 - `sql` The user-facing interface
 - `pg` A driver for PostgreSQL (wraps `libpq`)
-
-See the `test/test_sql.c3` file for examples of how to use the `sql` module.
+- `mysql8` A driver for MySQL 8.x (wraps `mysql-client@8`) [*not fully implemented yet*]
 
 Generally, this is how you would use the `sql` module:
 
@@ -56,6 +60,9 @@ fn void main()
     }
 }
 ```
+
+See the [test/test_sql.c3](test/test_sql.c3) file for examples of how to use the `sql` module.
+
 
 The `sql` package has the following API:
 
@@ -104,6 +111,26 @@ float
 ```
 
 Other types will currently return a `UNSUPPORTED_SCAN_TYPE` fault.
+
+## Limitations
+
+The library is work in progress and is still missing a lot of features. Ultimately the plan is to make it fully usable for all your SQL needs.
+
+Currently supported:
+
+- [x] Single connection to a database
+- [x] Execution of Queries and Statements
+- [x] Scanning of result values into all supported C3 types
+
+Not implemented yet:
+
+- [ ] No support for prepared statements
+- [ ] No support for transactions
+- [ ] No support for connection pooling
+- [ ] No support for parameterized queries
+- [ ] No support for named parameters
+- [ ] No support for multiple result sets
+
 
 ## LICENSE
 
