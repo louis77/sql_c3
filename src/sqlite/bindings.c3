@@ -33,6 +33,12 @@ const int SQLITE_WARNING =     28;   /* Warnings from sqlite3_log() */
 const int SQLITE_ROW =         100;  /* sqlite3_step() has another row ready */
 const int SQLITE_DONE =        101;  /* sqlite3_step() has finished executing */
 
+const int SQLITE_INTEGER  = 1;
+const int SQLITE_FLOAT    = 2;
+const int SQLITE_BLOB     = 4;
+const int SQLITE_NULL     = 5;
+const int SQLITE3_TEXT    = 3;
+
 fn String status_string(CInt code) {
     switch (code) {
         case 0: return "SQLITE_OK"; 
@@ -98,7 +104,9 @@ extern fn CInt sqlite3_prepare_v2(
 );
 
 extern fn CInt sqlite3_step(SqliteStmt stmt);
-extern fn CInt sqlite3_finalize(SqliteStmt *pStmt);
+extern fn CInt sqlite3_finalize(SqliteStmt pStmt);
+extern fn CLong sqlite3_changes64(SqliteHandle handle);
+extern fn CInt sqlite3_column_count(SqliteStmt pStmt);
 
 extern fn void* sqlite3_column_blob(SqliteStmt stmt, int iCol);
 extern fn double sqlite3_column_double(SqliteStmt stmt, int iCol);
@@ -110,3 +118,5 @@ extern fn void* sqlite3_column_value(SqliteStmt stmt, int iCol);
 extern fn CInt sqlite3_column_bytes(SqliteStmt stmt, int iCol);
 extern fn CInt sqlite3_column_bytes16(SqliteStmt stmt, int iCol);
 extern fn CInt sqlite3_column_type(SqliteStmt stmt, int iCol);
+
+extern fn ZString sqlite3_errmsg(SqliteHandle handle);
