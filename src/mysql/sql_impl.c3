@@ -81,7 +81,7 @@ fn void! MysqlDriver.ping(MysqlDriver* self, sql::Connection conn) @dynamic
 
 // Connection
 
-fn sql::Result! MysqlConnection.query(MysqlConnection* self, String command) @dynamic
+fn sql::Result! MysqlConnection.query(MysqlConnection* self, String command, any*... args) @dynamic
 {
     CInt success = mysql_real_query(self.conn, (ZString)command, command.len);
 
@@ -100,7 +100,7 @@ fn sql::Result! MysqlConnection.query(MysqlConnection* self, String command) @dy
     return result;
 }
 
-fn usz! MysqlConnection.exec(MysqlConnection* self, String command) @dynamic
+fn usz! MysqlConnection.exec(MysqlConnection* self, String command, any*... args) @dynamic
 {
     CInt success = mysql_real_query(self.conn, (ZString)command, command.len);
 

@@ -20,6 +20,11 @@ c3c test
 
 Make sure to change the linker paths in `project.json` to point to your `libpq` and `mysql-client` installation.
 
+## Supported databases
+
+- [X] PostgreSQL (must install `libpq`)
+- [X] MySQL 8+ (must install `mysql-client`)
+- [X] SQLite 3+  (must install `sqlite3`)
 
 ## Usage
 
@@ -98,6 +103,7 @@ fault Error
     NOT_IMPLEMENTED,
     COMMAND_FAILED,
     UNSUPPORTED_SCAN_TYPE,
+    ILLEGAL_COLUMN_ACCESS
 }
 ```
 
@@ -133,14 +139,14 @@ The library is work in progress and is still missing a lot of features. Ultimate
 
 Currently supported:
 
-- [x] Single connection to a database
+- [x] Connecting to a database
 - [x] Execution of Queries and Statements
-- [x] Scanning of result values into all supported C3 types
+- [x] Scanning of result values into all native C3 types
 
 In progress:
 
 - [ ] Proper memory handling
-- [ ] prepared statements
+- [ ] Prepared statements
 - [ ] Transactions
 - [ ] Connection pooling
 - [ ] Parameterized queries

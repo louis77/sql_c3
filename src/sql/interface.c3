@@ -17,8 +17,8 @@ interface Driver
 *>
 interface Connection 
 {
-    fn Result!      query(String command);
-    fn usz!         exec(String command);
+    fn Result!      query(String command, any*... args);
+    fn usz!         exec(String command, any*... args);
     fn String       last_error();
 }
 

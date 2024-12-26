@@ -63,7 +63,7 @@ fn void! SqliteDriver.ping(SqliteDriver* self, sql::Connection conn) @dynamic
 
 // Connection
 
-fn sql::Result! SqliteConnection.query(SqliteConnection* self, String command) @dynamic
+fn sql::Result! SqliteConnection.query(SqliteConnection* self, String command, any*... args) @dynamic
 {
     ZString cmd = command.zstr_copy();
     defer free(cmd);
@@ -82,7 +82,7 @@ fn sql::Result! SqliteConnection.query(SqliteConnection* self, String command) @
     return res;
 }
 
-fn usz! SqliteConnection.exec(SqliteConnection* self, String command) @dynamic
+fn usz! SqliteConnection.exec(SqliteConnection* self, String command, any*... args) @dynamic
 {
     ZString cmd = command.zstr_copy();
     defer free(cmd);

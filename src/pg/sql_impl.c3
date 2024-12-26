@@ -60,7 +60,7 @@ fn void! Postgres.ping(Postgres* self, sql::Connection conn) @dynamic
 
 // Connection
 
-fn sql::Result! PostgresConnection.query(PostgresConnection* self, String command) @dynamic
+fn sql::Result! PostgresConnection.query(PostgresConnection* self, String command, any*... args) @dynamic
 {
     PostgresResult* res = mem::new(PostgresResult);
     PGresult result = pq_exec(self.conn, (ZString)command);
@@ -77,7 +77,7 @@ fn sql::Result! PostgresConnection.query(PostgresConnection* self, String comman
     return (sql::Result) res;
 }
 
-fn usz! PostgresConnection.exec(PostgresConnection* self, String command) @dynamic
+fn usz! PostgresConnection.exec(PostgresConnection* self, String command, any*... args) @dynamic
 {
     PostgresResult* res = mem::new(PostgresResult);
     PGresult result = pq_exec(self.conn, (ZString)command);
