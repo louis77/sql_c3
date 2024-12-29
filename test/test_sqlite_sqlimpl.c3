@@ -6,9 +6,10 @@ import sql;
 
 String connection_string = "test.sqlite";
 
-fn void! test_sqlite_success() {
-//mem::@report_heap_allocs_in_scope()
-//{
+fn void! test_sqlite_success()
+{
+mem::@report_heap_allocs_in_scope()
+{
     Driver driver = sqlite::new_driver();
     defer sqlite::free_driver(driver);
 
@@ -16,10 +17,13 @@ fn void! test_sqlite_success() {
     defer try driver.close(conn);
 
     driver.ping(conn)!;
-//};
+};
 }
 
-fn void! test_sqlite_query() {
+fn void! test_sqlite_query()
+{
+mem::@report_heap_allocs_in_scope()
+{
     Driver driver = sqlite::new_driver();
     defer sqlite::free_driver(driver);
 
@@ -31,6 +35,7 @@ fn void! test_sqlite_query() {
         UNION
         SELECT 2 as an_int, 'world' as a_string, FALSE as a_bool, null as a_null`;
     Result res = conn.query(cmd)!;
+    defer res.close();
 
     usz count = 0;
     while (res.next()) {
@@ -62,6 +67,7 @@ fn void! test_sqlite_query() {
     }
 
     assert(count == 2, "Should have fetched two rows");
+};
 }
 
 fn void! test_sqlite_fail() {

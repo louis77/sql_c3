@@ -161,7 +161,7 @@ fn void! PostgresResult.scan(PostgresResult* self, int fieldnum, any dest) @dyna
     return;
 }
 
-fn void! PostgresResult.close(PostgresResult* self) @dynamic
+fn void PostgresResult.close(PostgresResult* self) @dynamic
 {
     pq_clear(self.result);
     mem::free(self);

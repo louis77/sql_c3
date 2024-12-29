@@ -55,7 +55,9 @@ fn void main()
 
     // Make a simple query
     String cmd = "SELECT * FROM (VALUES(1, 'hello', null), (2, 'world', null)) AS t(a_num, a_string, a_null)";
+
     Result res = conn.query(cmd)!;
+    defer res.close(); // Don't forget to close the result
 
     // Call next() to move to next row. Must also be called for the first row
     while (res.next()) {

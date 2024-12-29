@@ -67,6 +67,7 @@ fn void MysqlDriver.close(MysqlDriver* self, sql::Connection conn) @dynamic
 {
     MysqlConnection* c = (MysqlConnection*)conn;
     mysql_close(c.conn);
+    free(c);
 }
 
 fn void! MysqlDriver.ping(MysqlDriver* self, sql::Connection conn) @dynamic
@@ -80,7 +81,7 @@ fn void! MysqlDriver.ping(MysqlDriver* self, sql::Connection conn) @dynamic
 
 // Connection
 
-fn void! bind_parameters(MysqlStmt stmt, args...)
+fn void! bind_parameters(MysqlStmt stmt, args...) @private
 {
     MysqlBind* binds = calloc(MysqlBind.sizeof * args.len);
 
@@ -207,7 +208,7 @@ fn void! MysqlResult.scan(MysqlResult* self, int fieldnum, any dest) @dynamic
         return sql::Error.ILLEGAL_COLUMN_ACCESS?;
     }
 
-    DString builder = dstring::new(""); // TODO allocator=
+    DString builder = dstring::new("");
 
     usz chunk = 0;
     usz ret_size = 0;
@@ -242,7 +243,7 @@ fn void! MysqlResult.scan(MysqlResult* self, int fieldnum, any dest) @dynamic
     return;
 }
 
-fn void! MysqlResult.close(MysqlResult* self) @dynamic
+fn void MysqlResult.close(MysqlResult* self) @dynamic
 {
     mysql_stmt_free_result(self.stmt);
     return;

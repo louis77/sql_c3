@@ -4,8 +4,9 @@ import std::io;
 
 ZString connection_string = "postgres://postgres@localhost/postgres";
 
-fn void! test_all() 
+fn void! test_all()
 {
+mem::@report_heap_allocs_in_scope() {
 	CInt libversion = pq_lib_version();
     assert(libversion > 0, "Lib version should be greater than 0");
 
@@ -68,9 +69,12 @@ fn void! test_all()
 
 	pq_clear(result);
 	pq_finish(conn);
+};
 }
 
-fn void! test_cmd_tuples() 
+fn void! test_cmd_tuples()
+{
+mem::@report_heap_allocs_in_scope()
 {
 	PGconn conn = pq_connectdb(connection_string);
 	ConnStatusType dbstatus = pq_status(conn);
@@ -78,10 +82,11 @@ fn void! test_cmd_tuples()
 
 	PGresult result = pq_exec(conn, "CREATE TEMPORARY TABLE test (col INT)");
 	ZString cmd_status = pq_cmd_status(result);
-	
+
 	result = pq_exec(conn, "INSERT INTO test VALUES (1)");
 	ZString ntuples = pq_cmd_tuples(result);
 
 	pq_clear(result);
 	pq_finish(conn);
+};
 }

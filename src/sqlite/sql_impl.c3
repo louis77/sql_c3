@@ -52,6 +52,7 @@ fn void SqliteDriver.close(SqliteDriver* self, sql::Connection conn) @dynamic
 {
     SqliteConnection* c = (SqliteConnection*)conn;
     sqlite3_close(c.conn);
+    free(c);
 }
 
 fn void! SqliteDriver.ping(SqliteDriver* self, sql::Connection conn) @dynamic
@@ -171,15 +172,16 @@ fn void! SqliteResult.scan(SqliteResult* self, int fieldnum, any dest) @dynamic
         tmp_value = "";
     }
 
-    DString builder = dstring::new("");
+    DString builder = dstring::new("", allocator::temp());
     builder.append(tmp_value.str_view());
     sql::@convert_builder_value(builder, dest, was_null)!;
 
     return;
 }
 
-fn void! SqliteResult.close(SqliteResult* self) @dynamic
+fn void SqliteResult.close(SqliteResult* self) @dynamic
 {
     sqlite3_finalize(self.stmt);
+    mem::free(self);
     return;
 }

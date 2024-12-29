@@ -7,8 +7,8 @@ import sql;
 String connection_string = "mysql://root@localhost:3306/test";
 
 fn void! test_mysql_success() {
-//mem::@report_heap_allocs_in_scope()
-//{
+mem::@report_heap_allocs_in_scope()
+{
     Driver driver = mysql8::new_driver();
     defer mysql8::free_driver(driver);
 
@@ -16,10 +16,12 @@ fn void! test_mysql_success() {
     defer try driver.close(conn);
 
     driver.ping(conn)!;
-//};
+};
 }
 
 fn void! test_mysql_query() {
+mem::@report_heap_allocs_in_scope(false)
+{
     Driver driver = mysql8::new_driver();
     defer mysql8::free_driver(driver);
 
@@ -62,6 +64,7 @@ fn void! test_mysql_query() {
     }
 
     assert(count == 2, "Should have fetched two rows");
+};
 }
 
 fn void! test_mysql_fail() {

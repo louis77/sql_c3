@@ -4,15 +4,21 @@ import std::io;
 
 fn void! test_sqlite_open()
 {
+mem::@report_heap_allocs_in_scope()
+{
     SqliteHandle handle;
     CInt ret = sqlite3_open("test.sqlite", &handle);
     assert(ret == SQLITE_OK, "error on open(): %d", ret);
 
     ret = sqlite3_close(handle);
     assert(ret == SQLITE_OK, "error on close(): %d", ret);
+};
 }
 
-fn void! test_sqlite_simple_query() {
+fn void! test_sqlite_simple_query()
+{
+mem::@report_heap_allocs_in_scope()
+{
     SqliteHandle handle;
     CInt ret = sqlite3_open("test.sqlite", &handle);
     assert(ret == SQLITE_OK, "error on open(): %d", ret);
@@ -22,7 +28,7 @@ fn void! test_sqlite_simple_query() {
         assert(num_columns == 2, "incorrect number of columns returned: %d", num_columns);
         assert(col_names[0].str_view() == "world", "unexpected name of col[0]: '%s'", col_names[0]);
         assert(col_names[1].str_view() == "a_num", "unexpected name of col[1]: '%s'", col_names[1]);
-        
+
         assert(result[0].str_view() == "hello", "unexpected result[0]: '%s'", result[0]);
         assert(result[1].str_view() == "1", "unexpected result[1]: '%s'", result[1]);
 
@@ -32,9 +38,13 @@ fn void! test_sqlite_simple_query() {
 
     ret = sqlite3_close(handle);
     assert(ret == SQLITE_OK, "error on close(): %d", ret);
+};
 }
 
-fn void! test_sqlite_prepare() {
+fn void! test_sqlite_prepare()
+{
+mem::@report_heap_allocs_in_scope()
+{
     SqliteHandle handle;
     CInt ret = sqlite3_open("test.sqlite", &handle);
     assert(ret == SQLITE_OK, "error on open(): %d", ret);
@@ -61,4 +71,5 @@ fn void! test_sqlite_prepare() {
 
     ret = sqlite3_close(handle);
     assert(ret == SQLITE_OK, "error on close(): %d", ret);
+};
 }

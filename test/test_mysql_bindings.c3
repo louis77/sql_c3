@@ -3,11 +3,12 @@ module mysql8 @test;
 import std::io;
 
 fn void! test_all() {
+std::core::mem::@report_heap_allocs_in_scope() {
     mysql_library_init(0, null, null);
 
     Mysql mysql = mysql_init(null);
     assert(mysql != null, "mysql_init failed");
-    
+
     Mysql mysql2 = mysql_real_connect(mysql, "localhost", "root", "", "test", 3306, null, 0);
     if (mysql2 == null) {
         CUInt errno = mysql_errno(mysql);
@@ -35,4 +36,5 @@ fn void! test_all() {
 
     mysql_close(mysql);
     mysql_library_end();
+};
 }
