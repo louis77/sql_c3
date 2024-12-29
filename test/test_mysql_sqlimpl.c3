@@ -7,7 +7,7 @@ import sql;
 String connection_string = "mysql://root@localhost:3306/test";
 
 fn void! test_mysql_success() {
-//mem::@report_heap_allocs_in_scope() 
+//mem::@report_heap_allocs_in_scope()
 //{
     Driver driver = mysql8::new_driver();
     defer mysql8::free_driver(driver);
@@ -27,7 +27,7 @@ fn void! test_mysql_query() {
     defer try driver.close(conn);
 
 
-    String cmd = `SELECT 1 as an_int, 'hello' as a_string, TRUE as a_bool, null as a_null 
+    String cmd = `SELECT 1 as an_int, 'hello' as a_string, TRUE as a_bool, null as a_null
         UNION
         SELECT 2 as an_int, 'world' as a_string, FALSE as a_bool, null as a_null`;
     Result res = conn.query(cmd)!;
@@ -51,7 +51,7 @@ fn void! test_mysql_query() {
             assert(a_zstring.str_view() == "hello", "a_zstring should be 'hello'");
             assert(a_bool, "a_bool should be 'true'");
             assert(a_null == null, "a_null should be null");
-        } 
+        }
         if (count == 2) {
             assert(a_num == 2, "a_num should be 2");
             assert(a_string == "world", "a_string should be 'world'");
@@ -71,7 +71,7 @@ fn void! test_mysql_fail() {
     defer mysql8::free_driver(driver);
 
     Connection! conn = driver.open(connection_string);
-    
+
     if (catch excuse = conn) {
         return; // This is what we expect
     }
@@ -112,8 +112,31 @@ fn void! test_mysql_malformed_query() {
         // This is what we except
         String error_message = conn.last_error();
         assert(error_message.contains("error in your SQL syntax"), "expected syntax error, got '%s'", error_message);
-        return; 
+        return;
     }
 
     assert(false, "Query should have failed");
+}
+
+fn void! test_mysql_parameterized_query() {
+    Driver driver = mysql8::new_driver();
+    defer mysql8::free_driver(driver);
+
+    sql::Connection conn = driver.open(connection_string)!;
+    defer try driver.close(conn);
+
+    String expect2 = "efgh";
+    String expect = "abcd";
+    String cmd = `SELECT ? as a_param, ? as b_param`;
+    Result res = conn.query(cmd, expect, expect2)!;
+
+    assert(res.next(), "expected at least one row, got none");
+
+    String a_param;
+    String b_param;
+    res.scan(0, &a_param)!;
+    res.scan(1, &b_param)!;
+
+    assert(a_param == expect);
+    assert(b_param == expect2);
 }

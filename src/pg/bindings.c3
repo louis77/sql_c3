@@ -494,7 +494,14 @@ extern fn bool pq_getisnull(PGresult res, CInt row_number, CInt column_number) @
 extern fn ZString pq_cmd_status(PGresult res) @extern("PQcmdStatus");
 extern fn ZString pq_cmd_tuples(PGresult res) @extern("PQcmdTuples");
 extern fn ZString pq_result_error_message(PGresult res) @extern("PQresultErrorMessage");
-
+extern fn PGresult pq_exec_params(PGconn conn,
+                       ZString command,
+                       CInt nParams,
+                       CInt* paramTypes,
+                       ZString* paramValues,
+                       CInt* paramLengths,
+                       CInt *paramFormats,
+                       CInt resultFormat) @extern("PQexecParams");
 // Miscellaneous Functions
 
 extern fn CInt pq_lib_version() @extern("PQlibVersion");

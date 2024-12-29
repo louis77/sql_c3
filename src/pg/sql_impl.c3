@@ -38,7 +38,7 @@ fn sql::Connection! Postgres.open(Postgres* self, String connection_string) @dyn
     PostgresConnection* c = mem::new(PostgresConnection);
     c.conn = conn;
     c.connection_string = connection_string.copy();
-    return (sql::Connection) c;   
+    return (sql::Connection) c;
 }
 
 fn void Postgres.close(Postgres* self, sql::Connection conn) @dynamic
@@ -48,7 +48,7 @@ fn void Postgres.close(Postgres* self, sql::Connection conn) @dynamic
 }
 
 fn void! Postgres.ping(Postgres* self, sql::Connection conn) @dynamic
-{	
+{
     PostgresConnection* c = (PostgresConnection*)conn;
     PGconn tmp_conn = pq_connectdb((ZString)c.connection_string);
     ConnStatusType dbstatus = pq_status(tmp_conn);
@@ -60,15 +60,42 @@ fn void! Postgres.ping(Postgres* self, sql::Connection conn) @dynamic
 
 // Connection
 
-fn sql::Result! PostgresConnection.query(PostgresConnection* self, String command, any*... args) @dynamic
+fn PGresult! bind_parameters_and_exec(PostgresConnection* self, String command, args...) @private
 {
-    PostgresResult* res = mem::new(PostgresResult);
-    PGresult result = pq_exec(self.conn, (ZString)command);
+    CInt[]  paramTypes = mem::new_array(CInt, args.len);
+    ZString[]  paramValues = mem::new_array(ZString, args.len);
+    CInt[]     paramLengths = mem::new_array(CInt, args.len);
+    CInt[]     paramFormats = mem::new_array(CInt, args.len);
 
-    if (pq_result_status(result) != PGRES_TUPLES_OK) {
-        self._last_error = pq_result_error_message(result).str_view();
+    foreach (idx, val : args) {
+        usz bytes_printed;
+        DString out;
+	    out.new_init();
+        bytes_printed = out.appendf("%s", val)!;
+
+        paramTypes[idx] = pg::Oid.CSTRINGOID.oid;
+        paramValues[idx] = out.zstr_view();
+        paramLengths[idx] = (int)out.len();
+        paramFormats[idx] = 0;
+    }
+
+    PGresult res = pq_exec_params(self.conn, (ZString)command, args.len,
+        paramTypes, paramValues, paramLengths, paramFormats, 0); // 0 = TEXT
+
+    pg::ExecStatusType status = pq_result_status(res);
+    if ((status != PGRES_TUPLES_OK) && (status != PGRES_COMMAND_OK)) {
+        self._last_error = pq_result_error_message(res).str_view();
         return sql::Error.COMMAND_FAILED?;
     }
+
+    return res;
+}
+
+
+fn sql::Result! PostgresConnection.query(PostgresConnection* self, String command, args...) @dynamic
+{
+    PostgresResult* res = mem::new(PostgresResult);
+    PGresult result = bind_parameters_and_exec(self, command, ...args)!;
 
     res.row_count = pq_ntuples(result);
     res.current_row = -1;
@@ -77,14 +104,10 @@ fn sql::Result! PostgresConnection.query(PostgresConnection* self, String comman
     return (sql::Result) res;
 }
 
-fn usz! PostgresConnection.exec(PostgresConnection* self, String command, any*... args) @dynamic
+fn usz! PostgresConnection.exec(PostgresConnection* self, String command, args...) @dynamic
 {
     PostgresResult* res = mem::new(PostgresResult);
-    PGresult result = pq_exec(self.conn, (ZString)command);
-
-    if (pq_result_status(result) != PGRES_COMMAND_OK) {
-        return sql::Error.COMMAND_FAILED?;
-    }
+    PGresult result = bind_parameters_and_exec(self, command, ...args)!;
 
     ZString affected_rows_str = pq_cmd_tuples(result);
     usz! affected_rows = (usz)affected_rows_str.str_view().to_ulong();
@@ -102,7 +125,7 @@ fn String PostgresConnection.last_error(PostgresConnection* self) @dynamic
 
 // Result
 
-fn bool PostgresResult.next(PostgresResult* self) @dynamic 
+fn bool PostgresResult.next(PostgresResult* self) @dynamic
 {
     self.current_row++;
     if (self.current_row > (self.row_count-1)) {
@@ -113,10 +136,10 @@ fn bool PostgresResult.next(PostgresResult* self) @dynamic
 
 macro @set_null_value(dest, #value, was_null) @private
 {
-    if (was_null) { 
-        *dest = null; 
-    } else { 
-        **dest = #value; 
+    if (was_null) {
+        *dest = null;
+    } else {
+        **dest = #value;
     }
 }
 
@@ -128,73 +151,12 @@ fn void! PostgresResult.scan(PostgresResult* self, int fieldnum, any dest) @dyna
         tmp_value = "";
     }
 
+    DString builder = dstring::new("");
+    builder.append(tmp_value.str_view());
+
     // Sadly our driver currently always returns values as string
     // In the future, we'll use binary data and avoid conversions from string
-    switch (dest) {
-        case String:
-            *dest = tmp_value.str_view().copy();
-        case String*:
-            @set_null_value(dest, tmp_value.str_view().copy(), was_null);
-        case ZString:
-            *dest = tmp_value;
-        case ZString*:
-            @set_null_value(dest, tmp_value, was_null);
-        case bool:
-            *dest = tmp_value.str_view() == "t" ? true : false;
-        case bool*:
-            @set_null_value(dest, (tmp_value.str_view() == "t") ? true : false, was_null);
-        case int:
-            *dest = tmp_value.str_view().to_int()!;
-        case int*:
-            @set_null_value(dest, tmp_value.str_view().to_int()!, was_null);
-        case int128:
-            *dest = tmp_value.str_view().to_int128()!;
-        case int128*:
-            @set_null_value(dest, tmp_value.str_view().to_int128()!, was_null);
-        case long:
-            *dest = tmp_value.str_view().to_long()!;
-        case long*:
-            @set_null_value(dest, tmp_value.str_view().to_long()!, was_null);        
-        case short:
-            *dest = tmp_value.str_view().to_short()!;
-        case short*:
-            @set_null_value(dest, tmp_value.str_view().to_short()!, was_null);        
-        case ichar:
-            *dest = tmp_value.str_view().to_ichar()!;
-        case ichar*:
-            @set_null_value(dest, tmp_value.str_view().to_ichar()!, was_null);        
-        case uint128:
-            *dest = tmp_value.str_view().to_uint128()!;
-        case uint128*:
-            @set_null_value(dest, tmp_value.str_view().to_uint128()!, was_null);        
-        case ulong:
-            *dest = tmp_value.str_view().to_ulong()!;
-        case ulong*:
-            @set_null_value(dest, tmp_value.str_view().to_ulong()!, was_null);        
-        case uint:
-            *dest = tmp_value.str_view().to_uint()!;
-        case uint*:
-            @set_null_value(dest, tmp_value.str_view().to_uint()!, was_null);        
-        case ushort:
-            *dest = tmp_value.str_view().to_ushort()!;
-        case ushort*:
-            @set_null_value(dest, tmp_value.str_view().to_ushort()!, was_null);        
-        case char:
-            *dest = tmp_value.str_view().to_uchar()!;
-        case char*:
-            @set_null_value(dest, tmp_value.str_view().to_uchar()!, was_null);        
-        case double:
-            *dest = tmp_value.str_view().to_double()!;
-        case double*:
-            @set_null_value(dest, tmp_value.str_view().to_double()!, was_null);        
-        case float:
-            *dest = tmp_value.str_view().to_float()!;
-        case float*:
-            @set_null_value(dest, tmp_value.str_view().to_float()!, was_null);   
-        default:
-            io::eprintf("scanning faild for row: %d field: %d\n", self.current_row, fieldnum);
-            return sql::Error.UNSUPPORTED_SCAN_TYPE?;
-    }
+    sql::@convert_builder_value(builder, dest, was_null)!;
 
     return;
 }

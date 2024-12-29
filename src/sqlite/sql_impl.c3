@@ -56,23 +56,50 @@ fn void SqliteDriver.close(SqliteDriver* self, sql::Connection conn) @dynamic
 
 fn void! SqliteDriver.ping(SqliteDriver* self, sql::Connection conn) @dynamic
 {
-    // sqlite is file-based, there is nothing to ping. 
+    // sqlite is file-based, there is nothing to ping.
     // when the connection is created, we assume everything is ok.
     return;
 }
 
 // Connection
 
-fn sql::Result! SqliteConnection.query(SqliteConnection* self, String command, any*... args) @dynamic
+fn void! bind_parameters(SqliteConnection* self, SqliteStmt stmt, args...) @private
 {
+    CInt ret;
+    foreach (idx, val : args) {
+        if (val == null) {
+            ret = sqlite::sqlite3_bind_null(stmt, (CInt)idx+1);
+        } else {
+            usz bytes_printed;
+            DString out;
+            out.new_init();
+            bytes_printed = out.appendf("%s", val)!;
+
+            ret = sqlite::sqlite3_bind_text(stmt, (CInt)idx+1, out.zstr_view(), (int)out.len(), null);
+        }
+
+        if (ret != SQLITE_OK) {
+            self._last_error =  sqlite3_errmsg(self.conn);
+            return sql::Error.COMMAND_FAILED?;
+        }
+    }
+}
+
+fn sql::Result! SqliteConnection.query(SqliteConnection* self, String command, args...) @dynamic
+{
+    // TODO: https://www.sqlite.org/c3ref/bind_blob.html
+    SqliteStmt stmt;
+    CInt ret;
+
     ZString cmd = command.zstr_copy();
     defer free(cmd);
-    SqliteStmt stmt;
-    CInt ret = sqlite3_prepare_v2(self.conn, cmd, -1, &stmt, null);
+    ret = sqlite3_prepare_v2(self.conn, cmd, -1, &stmt, null);
     if (ret != SQLITE_OK) {
         self._last_error =  sqlite3_errmsg(self.conn);
         return sql::Error.COMMAND_FAILED?;
     }
+
+    bind_parameters(self, stmt, ...args)!;
 
     SqliteResult* res = mem::new(SqliteResult);
     res.stmt = stmt;
@@ -82,7 +109,7 @@ fn sql::Result! SqliteConnection.query(SqliteConnection* self, String command, a
     return res;
 }
 
-fn usz! SqliteConnection.exec(SqliteConnection* self, String command, any*... args) @dynamic
+fn usz! SqliteConnection.exec(SqliteConnection* self, String command, args...) @dynamic
 {
     ZString cmd = command.zstr_copy();
     defer free(cmd);
@@ -92,6 +119,8 @@ fn usz! SqliteConnection.exec(SqliteConnection* self, String command, any*... ar
         self._last_error =  sqlite3_errmsg(self.conn);
         return sql::Error.COMMAND_FAILED?;
     }
+
+    bind_parameters(self, stmt, ...args)!;
 
     ret = sqlite3_step(stmt);
     if (ret != SQLITE_DONE) {
@@ -115,16 +144,16 @@ fn bool SqliteResult.next(SqliteResult* self) @dynamic
     CInt ret = sqlite3_step(self.stmt);
     if (ret == SQLITE_DONE) return false;
 
-    if (ret != SQLITE_ROW) return false; // TODO This is an error! 
+    if (ret != SQLITE_ROW) return false; // TODO This is an error!
     return true;
 }
 
 macro @set_null_value(dest, #value, was_null) @private
 {
-    if (was_null) { 
-        *dest = null; 
-    } else { 
-        **dest = #value; 
+    if (was_null) {
+        *dest = null;
+    } else {
+        **dest = #value;
     }
 }
 
@@ -142,70 +171,9 @@ fn void! SqliteResult.scan(SqliteResult* self, int fieldnum, any dest) @dynamic
         tmp_value = "";
     }
 
-    switch (dest) {
-        case String:
-            *dest = tmp_value.str_view().copy();
-        case String*:
-            @set_null_value(dest, tmp_value.str_view().copy(), was_null);
-        case ZString:
-            *dest = tmp_value;
-        case ZString*:
-            @set_null_value(dest, tmp_value, was_null);
-        case bool:
-            *dest = tmp_value.str_view() == "1" ? true : false; 
-        case bool*:
-            @set_null_value(dest, (tmp_value.str_view() == "1") ? true : false, was_null);
-        case int:
-            *dest = tmp_value.str_view().to_int()!;
-        case int*:
-            @set_null_value(dest, tmp_value.str_view().to_int()!, was_null);
-        case int128:
-            *dest = tmp_value.str_view().to_int128()!;
-        case int128*:
-            @set_null_value(dest, tmp_value.str_view().to_int128()!, was_null);
-        case long:
-            *dest = tmp_value.str_view().to_long()!;
-        case long*:
-            @set_null_value(dest, tmp_value.str_view().to_long()!, was_null);        
-        case short:
-            *dest = tmp_value.str_view().to_short()!;
-        case short*:
-            @set_null_value(dest, tmp_value.str_view().to_short()!, was_null);        
-        case ichar:
-            *dest = tmp_value.str_view().to_ichar()!;
-        case ichar*:
-            @set_null_value(dest, tmp_value.str_view().to_ichar()!, was_null);        
-        case uint128:
-            *dest = tmp_value.str_view().to_uint128()!;
-        case uint128*:
-            @set_null_value(dest, tmp_value.str_view().to_uint128()!, was_null);        
-        case ulong:
-            *dest = tmp_value.str_view().to_ulong()!;
-        case ulong*:
-            @set_null_value(dest, tmp_value.str_view().to_ulong()!, was_null);        
-        case uint:
-            *dest = tmp_value.str_view().to_uint()!;
-        case uint*:
-            @set_null_value(dest, tmp_value.str_view().to_uint()!, was_null);        
-        case ushort:
-            *dest = tmp_value.str_view().to_ushort()!;
-        case ushort*:
-            @set_null_value(dest, tmp_value.str_view().to_ushort()!, was_null);        
-        case char:
-            *dest = tmp_value.str_view().to_uchar()!;
-        case char*:
-            @set_null_value(dest, tmp_value.str_view().to_uchar()!, was_null);        
-        case double:
-            *dest = tmp_value.str_view().to_double()!;
-        case double*:
-            @set_null_value(dest, tmp_value.str_view().to_double()!, was_null);        
-        case float:
-            *dest = tmp_value.str_view().to_float()!;
-        case float*:
-            @set_null_value(dest, tmp_value.str_view().to_float()!, was_null);        
-        default:
-            return sql::Error.UNSUPPORTED_SCAN_TYPE?;
-    }
+    DString builder = dstring::new("");
+    builder.append(tmp_value.str_view());
+    sql::@convert_builder_value(builder, dest, was_null)!;
 
     return;
 }

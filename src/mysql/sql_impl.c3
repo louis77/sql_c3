@@ -1,6 +1,8 @@
 module mysql8;
 
 import std::io;
+import std::collections::list;
+import libc;
 import url;
 import sql;
 
@@ -9,10 +11,8 @@ struct MysqlDriver (sql::Driver) {
 }
 
 struct MysqlResult (sql::Result) {
-    MysqlRes result;
-    int current_row_num;  // TODO: Match with maximum size of rows returned by driver
-    CUInt num_fields;
-    MysqlRow current_row;
+    CUInt       num_fields;
+    MysqlStmt   stmt;
 }
 
 struct MysqlConnection (sql::Connection) {
@@ -23,7 +23,6 @@ struct MysqlConnection (sql::Connection) {
 
 fn MysqlDriver* new_driver() {
     mysql_library_init(0, null, null); // TODO should we check for the return value?
-    
     MysqlDriver* db = mem::new(MysqlDriver);
     return db;
 }
@@ -75,36 +74,106 @@ fn void! MysqlDriver.ping(MysqlDriver* self, sql::Connection conn) @dynamic
     MysqlConnection* c = (MysqlConnection*)conn;
     if (mysql_ping(c.conn) != 0) {
         return sql::Error.CONNECTION_FAILURE?;
-    }     
+    }
     return;
 }
 
 // Connection
 
-fn sql::Result! MysqlConnection.query(MysqlConnection* self, String command, any*... args) @dynamic
+fn void! bind_parameters(MysqlStmt stmt, args...)
 {
-    CInt success = mysql_real_query(self.conn, (ZString)command, command.len);
+    MysqlBind* binds = calloc(MysqlBind.sizeof * args.len);
 
-    if (success != 0) {
+    MysqlBind bind;
+    foreach (idx, val : args) {
+        bind.buffer_type = MYSQL_TYPE_VARCHAR;
+        usz bytes_printed;
+        DString out;
+	    out.new_init();
+        bytes_printed = out.appendf("%s", val)!;
+        bind.buffer_length = bytes_printed;
+        bind.buffer = out.str_view();
+        binds[idx] = bind;
+    }
+
+    CInt ret = (int)mysql_stmt_bind_param(stmt, binds);
+    if (ret != 0) {
+        io::eprintfn("Binding params failed with code: %d", ret);
+        return sql::Error.UNSUPPORTED_BIND_TYPE?;
+    }
+}
+
+fn sql::Result! MysqlConnection.query(MysqlConnection* self, String command, args...) @dynamic
+{
+    // If args[] is len > 0 then we _must_ use prepared statements, otherwise we could just use real_query...
+    MysqlStmt stmt = mysql_stmt_init(self.conn);
+    if (stmt == null) {
+        return sql::Error.PREPARE_FAILED?;
+    }
+
+    ZString zcommand = command.zstr_copy();
+    defer free(zcommand);
+    CInt ret = mysql_stmt_prepare(stmt, zcommand, command.len);
+    if (ret != 0) {
         self._last_error = mysql_error(self.conn).str_view();
+        return sql::Error.PREPARE_FAILED?;
+    }
 
+    bind_parameters(stmt, ...args)!;
+
+    ret = mysql_stmt_execute(stmt);
+    if (ret != 0) {
+        self._last_error = mysql_error(self.conn).str_view();
+        io::eprintn(self._last_error);
         return sql::Error.COMMAND_FAILED?;
     }
 
-    MysqlRes res = mysql_use_result(self.conn);
-    MysqlResult* result = mem::alloc(MysqlResult);
-    result.current_row_num = -1;
-    result.result = res;
-    result.num_fields = mysql_num_fields(res);
+    MysqlResult* result = mem::new(MysqlResult);
+    result.stmt = stmt;
+    result.num_fields = mysql_stmt_field_count(stmt);
+
+    CULong real_length = 0;
+
+    // Bind to empty buffer. This is stupidly necessary to tell MySQL that we will
+    // later fetch columns individually via fetch_column()
+
+    MysqlBind* empty_bind = calloc(MysqlBind.sizeof * result.num_fields);
+    for (int idx = 0; idx < result.num_fields; idx++) {
+        empty_bind[idx].buffer = (void *)0;
+        empty_bind[idx].buffer_length = 0;
+        empty_bind[idx].length = &real_length;
+    }
+
+    bool bind_ret = mysql_stmt_bind_result(stmt, empty_bind);
+    if ((int)bind_ret != 0) {
+        return sql::Error.PARAM_BINDING_FAILED?;
+    }
 
     return result;
 }
 
-fn usz! MysqlConnection.exec(MysqlConnection* self, String command, any*... args) @dynamic
+fn usz! MysqlConnection.exec(MysqlConnection* self, String command, args...) @dynamic
 {
-    CInt success = mysql_real_query(self.conn, (ZString)command, command.len);
+   // If args[] is len > 0 then we _must_ use prepared statements, otherwise we could just use real_query...
+    MysqlStmt stmt = mysql_stmt_init(self.conn);
+    if (stmt == null) {
+        return sql::Error.PREPARE_FAILED?;
+    }
 
-    if (success != 0) {
+    ZString zcommand = command.zstr_copy();
+    defer free(zcommand);
+    CInt ret = mysql_stmt_prepare(stmt, zcommand, command.len);
+    if (ret != 0) {
+        self._last_error = mysql_error(self.conn).str_view();
+        return sql::Error.PREPARE_FAILED?;
+    }
+
+    bind_parameters(stmt, ...args)!;
+
+    ret = mysql_stmt_execute(stmt);
+    if (ret != 0) {
+        self._last_error = mysql_error(self.conn).str_view();
+        io::eprintn(self._last_error);
         return sql::Error.COMMAND_FAILED?;
     }
 
@@ -124,109 +193,57 @@ fn String MysqlConnection.last_error(MysqlConnection* self) @dynamic
 
 fn bool MysqlResult.next(MysqlResult* self) @dynamic
 {
-    self.current_row_num++;
-    MysqlRow row = mysql_fetch_row(self.result);
-    if (row == null) {
-        return false;
-        // TODO we must check for an error here
-    }
+    CInt status = mysql_stmt_fetch(self.stmt);
+    if (status == 1 || status == MYSQL_NO_DATA) return false;
 
-    self.current_row = row;
     return true;
 }
 
-macro @set_null_value(dest, #value, was_null) @private
-{
-    if (was_null) { 
-        *dest = null; 
-    } else { 
-        **dest = #value; 
-    }
-}
+
 
 fn void! MysqlResult.scan(MysqlResult* self, int fieldnum, any dest) @dynamic
-{   
+{
     if (fieldnum+1 > self.num_fields) {
         return sql::Error.ILLEGAL_COLUMN_ACCESS?;
     }
 
-    ZString tmp_value = (ZString)self.current_row[fieldnum];
-    bool was_null = (tmp_value == null);
-    if (was_null) {
-        tmp_value = "";
-    }
+    DString builder = dstring::new(""); // TODO allocator=
 
-    switch (dest) {
-        case String:
-            *dest = tmp_value.str_view().copy();
-        case String*:
-            @set_null_value(dest, tmp_value.str_view().copy(), was_null);
-        case ZString:
-            *dest = tmp_value;
-        case ZString*:
-            @set_null_value(dest, tmp_value, was_null);
-        case bool:
-            *dest = tmp_value.str_view() == "1" ? true : false; 
-        case bool*:
-            @set_null_value(dest, (tmp_value.str_view() == "1") ? true : false, was_null);
-        case int:
-            *dest = tmp_value.str_view().to_int()!;
-        case int*:
-            @set_null_value(dest, tmp_value.str_view().to_int()!, was_null);
-        case int128:
-            *dest = tmp_value.str_view().to_int128()!;
-        case int128*:
-            @set_null_value(dest, tmp_value.str_view().to_int128()!, was_null);
-        case long:
-            *dest = tmp_value.str_view().to_long()!;
-        case long*:
-            @set_null_value(dest, tmp_value.str_view().to_long()!, was_null);        
-        case short:
-            *dest = tmp_value.str_view().to_short()!;
-        case short*:
-            @set_null_value(dest, tmp_value.str_view().to_short()!, was_null);        
-        case ichar:
-            *dest = tmp_value.str_view().to_ichar()!;
-        case ichar*:
-            @set_null_value(dest, tmp_value.str_view().to_ichar()!, was_null);        
-        case uint128:
-            *dest = tmp_value.str_view().to_uint128()!;
-        case uint128*:
-            @set_null_value(dest, tmp_value.str_view().to_uint128()!, was_null);        
-        case ulong:
-            *dest = tmp_value.str_view().to_ulong()!;
-        case ulong*:
-            @set_null_value(dest, tmp_value.str_view().to_ulong()!, was_null);        
-        case uint:
-            *dest = tmp_value.str_view().to_uint()!;
-        case uint*:
-            @set_null_value(dest, tmp_value.str_view().to_uint()!, was_null);        
-        case ushort:
-            *dest = tmp_value.str_view().to_ushort()!;
-        case ushort*:
-            @set_null_value(dest, tmp_value.str_view().to_ushort()!, was_null);        
-        case char:
-            *dest = tmp_value.str_view().to_uchar()!;
-        case char*:
-            @set_null_value(dest, tmp_value.str_view().to_uchar()!, was_null);        
-        case double:
-            *dest = tmp_value.str_view().to_double()!;
-        case double*:
-            @set_null_value(dest, tmp_value.str_view().to_double()!, was_null);        
-        case float:
-            *dest = tmp_value.str_view().to_float()!;
-        case float*:
-            @set_null_value(dest, tmp_value.str_view().to_float()!, was_null);        
-        default:
-            io::eprintf("scanning faild for row: %d field: %d\n", self.current_row, fieldnum);
-            return sql::Error.UNSUPPORTED_SCAN_TYPE?;
-    }
+    usz chunk = 0;
+    usz ret_size = 0;
+    CULong buffer_size = 1024;
+    CULong offset = 0;
+    bool is_null;
+    ZString buffer = (ZString)calloc(char.sizeof * buffer_size);
+
+    MysqlBind* bind = calloc(MysqlBind.sizeof);
+    bind.buffer_type = MYSQL_TYPE_VARCHAR;
+    bind.buffer = buffer;
+    bind.buffer_length = buffer_size;
+    bind.is_null = &is_null;
+
+    do {
+        chunk++;
+
+        CInt status = mysql_stmt_fetch_column(self.stmt, bind, fieldnum, offset);
+        if (status != 0) return sql::Error.UNKNOWN_ERROR?;
+
+        ret_size = libc::strlen(buffer);
+
+        if (ret_size > 0) {
+            offset += ret_size;
+            builder.write(buffer[..ret_size-1])!;
+        }
+
+    } while(ret_size > 0 && ret_size == buffer_size);
+
+    sql::@convert_builder_value(builder, dest, is_null)!;
 
     return;
 }
 
 fn void! MysqlResult.close(MysqlResult* self) @dynamic
 {
-    mysql_free_result(self.result);
+    mysql_stmt_free_result(self.stmt);
     return;
 }

@@ -77,21 +77,21 @@ See the [test](test) folder for examples of how to use the `sql` module.
 The `sql` package has the following API:
 
 ```kotlin
-interface Driver 
+interface Driver
 {
     fn Connection!  open(String connection_string);
     fn void         close(Connection conn);
     fn void!        ping(Connection conn);
-} 
+}
 
-interface Connection 
+interface Connection
 {
-    fn Result!      query(String command);
-    fn usz!         exec(String command);
+    fn Result!      query(String command, args...);
+    fn usz!         exec(String command, args...);
     fn String       last_error();
 }
 
-interface Result 
+interface Result
 {
     fn bool         next();
     fn void!        scan(int fieldnum, any dest);
@@ -102,12 +102,23 @@ fault Error
     CONNECTION_FAILURE,
     NOT_IMPLEMENTED,
     COMMAND_FAILED,
+    PARAM_BINDING_FAILED,
     UNSUPPORTED_SCAN_TYPE,
-    ILLEGAL_COLUMN_ACCESS
+    UNSUPPORTED_BIND_TYPE,
+    ILLEGAL_COLUMN_ACCESS,
+    PREPARE_FAILED,
+    UNKNOWN_ERROR,
 }
 ```
 
-### Scanning values
+### Query arguments
+
+All supported drivers use parameter binding to safely pass arguments to queries. All types that implement the `Printable` interface are supported.
+
+The SQL syntax to indicate parameters in a query depend on the database. For example, PostgreSQL uses `$1`, `$2` etc. For MySQL, use `?`. For SQLite, use `?`, `?N`, `:N`, `@N` or `$N` where `N` is the index of the parameter (starting at 1).
+
+
+### Scanning results
 
 The following types are supported for scanning destinations:
 
@@ -142,6 +153,7 @@ Currently supported:
 - [x] Connecting to a database
 - [x] Execution of Queries and Statements
 - [x] Scanning of result values into all native C3 types
+- [x] Parameterized queries
 
 In progress:
 
@@ -149,7 +161,6 @@ In progress:
 - [ ] Prepared statements
 - [ ] Transactions
 - [ ] Connection pooling
-- [ ] Parameterized queries
 - [ ] Named parameters
 - [ ] Multiple result sets
 
