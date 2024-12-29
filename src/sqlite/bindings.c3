@@ -103,6 +103,7 @@ extern fn CInt sqlite3_prepare_v2(
   ZString* pzTail         /* OUT: Pointer to unused portion of zSql */
 );
 
+
 extern fn CInt sqlite3_step(SqliteStmt stmt);
 extern fn CInt sqlite3_finalize(SqliteStmt pStmt);
 extern fn CLong sqlite3_changes64(SqliteHandle handle);

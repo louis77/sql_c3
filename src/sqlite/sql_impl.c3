@@ -13,9 +13,10 @@ struct SqliteResult (sql::Result) {
 }
 
 struct SqliteConnection (sql::Connection) {
-    SqliteHandle  conn;
-    String connection_string;
-    ZString _last_error;
+    SqliteHandle    conn;
+    String          connection_string;
+    ZString         _last_error;
+    bool            _tx_in_progress;
 }
 
 fn SqliteDriver* new_driver() {
@@ -135,6 +136,45 @@ fn usz! SqliteConnection.exec(SqliteConnection* self, String command, args...) @
 fn String SqliteConnection.last_error(SqliteConnection* self) @dynamic
 {
     return self._last_error.str_view();
+}
+
+fn void! SqliteConnection.tx_begin(SqliteConnection* self) @dynamic
+{
+    if (self._tx_in_progress) {
+        return sql::Error.TX_ALREADY_IN_PROGRESS?;
+    }
+
+    CInt ret = sqlite3_exec(self.conn, "BEGIN", null, null, &self._last_error);
+    if (ret != SQLITE_OK) {
+        self._last_error =  sqlite3_errmsg(self.conn);
+        return sql::Error.COMMAND_FAILED?;
+    }
+    self._tx_in_progress = true;
+}
+
+fn void! SqliteConnection.tx_commit(SqliteConnection* self) @dynamic
+{
+    CInt ret = sqlite3_exec(self.conn, "COMMIT", null, null, &self._last_error);
+    if (ret != SQLITE_OK) {
+        self._last_error =  sqlite3_errmsg(self.conn);
+        return sql::Error.COMMAND_FAILED?;
+    }
+    self._tx_in_progress = false;
+}
+
+fn void! SqliteConnection.tx_rollback(SqliteConnection* self) @dynamic
+{
+    CInt ret = sqlite3_exec(self.conn, "ROLLBACK", null, null, &self._last_error);
+    if (ret != SQLITE_OK) {
+        self._last_error =  sqlite3_errmsg(self.conn);
+        return sql::Error.COMMAND_FAILED?;
+    }
+    self._tx_in_progress = false;
+}
+
+fn bool SqliteConnection.tx_in_progress(SqliteConnection* self) @dynamic
+{
+    return self._tx_in_progress;
 }
 
 // Result

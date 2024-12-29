@@ -92,9 +92,15 @@ enum MysqlOption : CInt {
   MYSQL_OPT_TLS_SNI_SERVERNAME
 }
 
+enum Autocommit : CInt {
+    AUTOCOMMIT_OFF,
+    AUTOCOMMIT_ON
+}
+
 extern fn CULong        mysql_affected_rows(Mysql mysql);
-extern fn bool          mysql_autocommit(Mysql mysql, bool mode);
+extern fn bool          mysql_autocommit(Mysql mysql, Autocommit mode);
 extern fn void          mysql_close(Mysql mysql);
+extern fn bool          mysql_commit(Mysql mysql);
 extern fn Mysql         mysql_init(Mysql mysql);
 extern fn CUInt         mysql_errno(Mysql mysql);
 extern fn ZString       mysql_error(Mysql mysql);
@@ -107,6 +113,7 @@ extern fn CInt          mysql_options(Mysql *mysql, MysqlOption option, void *ar
 extern fn CInt          mysql_ping(Mysql mysql);
 extern fn Mysql         mysql_real_connect(Mysql mysql, ZString host, ZString user, ZString passwd, ZString db, CUInt port, ZString unix_socket, CULong client_flag);
 extern fn CInt          mysql_real_query(Mysql mysql, ZString stmt_str, CULong length);
+extern fn bool          mysql_rollback(Mysql mysql);
 extern fn MysqlRes      mysql_use_result(Mysql mysql);
 
 // Prepared Statement Functions

@@ -158,3 +158,106 @@ mem::@report_heap_allocs_in_scope()
     assert(b_param == expect2);
 };
 }
+
+fn void! test_mysql_transaction_success() {
+mem::@report_heap_allocs_in_scope()
+{
+    Driver driver = mysql8::new_driver();
+    defer mysql8::free_driver(driver);
+
+    sql::Connection conn = driver.open(connection_string)!;
+    defer try driver.close(conn);
+
+    conn.tx_begin()!;
+    defer (catch err) {
+        if (catch conn.tx_rollback()) {
+            assert(false, "Rollback failed");
+        }
+    }
+
+    assert(conn.tx_in_progress(), "Transaction should be in progress");
+
+    String cmd = `DROP TABLE IF EXISTS test`;
+    conn.exec(cmd)!;
+
+    cmd = `CREATE TABLE test (x INT)`;
+    usz affected_rows = conn.exec(cmd)!;
+
+    cmd = `INSERT INTO test VALUES (1)`;
+    affected_rows = conn.exec(cmd)!;
+    assert(affected_rows == 1, "INSERT INTO should affect 1 row");
+
+    conn.tx_commit()!;
+    assert(!conn.tx_in_progress(), "Transaction should not be in progress");
+
+    // We expect now this row to exist
+    cmd = `SELECT * FROM test`;
+    Result res = conn.query(cmd)!;
+    defer res.close();
+
+    assert(res.next(), "expected at least one row, got none");
+
+    int x;
+    res.scan(0, &x)!;
+    assert(x == 1, "x should be 1");
+};
+}
+
+fn void! test_mysql_transaction_rollback() {
+mem::@report_heap_allocs_in_scope()
+{
+    Driver driver = mysql8::new_driver();
+    defer mysql8::free_driver(driver);
+
+    sql::Connection conn = driver.open(connection_string)!;
+    defer try driver.close(conn);
+
+    conn.tx_begin()!;
+    defer (catch err) {
+        if (catch conn.tx_rollback()) {
+            assert(false, "Rollback failed");
+        }
+    }
+
+    assert(conn.tx_in_progress(), "Transaction should be in progress");
+
+    String cmd = `DROP TABLE IF EXISTS test`;
+    conn.exec(cmd)!;
+
+    cmd = `CREATE TABLE test (x INT)`;
+    usz affected_rows = conn.exec(cmd)!;
+
+    cmd = `INSERT INTO test VALUES (1)`;
+    affected_rows = conn.exec(cmd)!;
+    assert(affected_rows == 1, "INSERT INTO should affect 1 row");
+
+    conn.tx_rollback()!;
+    assert(!conn.tx_in_progress(), "Transaction should not be in progress");
+
+    // We expect now this row to not exist
+    cmd = `SELECT * FROM test`;
+    Result res = conn.query(cmd)!;
+    defer res.close();
+
+    assert(!res.next(), "expected no rows, got one");
+};
+}
+
+fn void! test_mysql_double_transaction() {
+mem::@report_heap_allocs_in_scope()
+{
+    Driver driver = mysql8::new_driver();
+    defer mysql8::free_driver(driver);
+
+    sql::Connection conn = driver.open(connection_string)!;
+    defer try driver.close(conn);
+
+    if (catch excuse = conn.tx_begin()) {
+        assert(excuse == sql::Error.TX_ALREADY_IN_PROGRESS, "Transaction should be already in progress");
+    };
+
+    if (try conn.tx_begin()) {
+        assert(false, "Transaction should be already in progress");
+    }
+};
+}

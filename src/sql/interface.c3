@@ -20,6 +20,12 @@ interface Connection
     fn Result!      query(String command, args...);
     fn usz!         exec(String command, args...);
     fn String       last_error();
+
+    // Optionally, start, commit or rollback transactions
+    fn void!        tx_begin();
+    fn void!        tx_commit();
+    fn void!        tx_rollback();
+    fn bool         tx_in_progress();
 }
 
 <*
@@ -47,4 +53,5 @@ fault Error
     ILLEGAL_COLUMN_ACCESS,
     PREPARE_FAILED,
     UNKNOWN_ERROR,
+    TX_ALREADY_IN_PROGRESS,
 }

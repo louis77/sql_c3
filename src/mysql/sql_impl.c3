@@ -19,6 +19,7 @@ struct MysqlConnection (sql::Connection) {
     Mysql  conn;
     String connection_string;
     String _last_error;
+    bool   autocommit;
 }
 
 fn MysqlDriver* new_driver() {
@@ -59,6 +60,7 @@ fn sql::Connection! MysqlDriver.open(MysqlDriver* self, String connection_string
     MysqlConnection* conn = mem::new(MysqlConnection);
     conn.conn = mysql2;
     conn.connection_string = connection_string;
+    conn.autocommit = true; // MySQL default for new connections;
 
     return conn;
 }
@@ -190,6 +192,48 @@ fn String MysqlConnection.last_error(MysqlConnection* self) @dynamic
 {
     return self._last_error;
 }
+
+fn void! MysqlConnection.tx_begin(MysqlConnection* self) @dynamic
+{
+    if (!self.autocommit) {
+        return sql::Error.TX_ALREADY_IN_PROGRESS?;
+    }
+    bool ret = mysql_autocommit(self.conn, Autocommit.AUTOCOMMIT_OFF);
+    if (ret != (bool)0) {
+        return sql::Error.COMMAND_FAILED?;
+    }
+    self.autocommit = false;
+}
+
+fn void! MysqlConnection.tx_commit(MysqlConnection* self) @dynamic
+{
+    defer {
+        mysql_autocommit(self.conn, Autocommit.AUTOCOMMIT_ON);
+        self.autocommit = true;
+    }
+    bool ret = mysql_commit(self.conn);
+    if (ret != (bool)0) {
+        return sql::Error.COMMAND_FAILED?;
+    }
+}
+
+fn void! MysqlConnection.tx_rollback(MysqlConnection* self) @dynamic
+{
+    defer {
+        mysql_autocommit(self.conn, Autocommit.AUTOCOMMIT_ON);
+        self.autocommit = true;
+    }
+    bool ret = mysql_rollback(self.conn);
+    if (ret != (bool)0) {
+        return sql::Error.COMMAND_FAILED?;
+    }
+}
+
+fn bool MysqlConnection.tx_in_progress(MysqlConnection* self) @dynamic
+{
+    return !self.autocommit;
+}
+
 
 // Result
 

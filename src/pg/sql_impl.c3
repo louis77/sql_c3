@@ -17,6 +17,7 @@ struct PostgresConnection (sql::Connection) {
     void* conn;
     String connection_string;
     String _last_error;
+    bool   _tx_in_progress;
 }
 
 
@@ -38,6 +39,7 @@ fn sql::Connection! Postgres.open(Postgres* self, String connection_string) @dyn
     PostgresConnection* c = mem::new(PostgresConnection);
     c.conn = conn;
     c.connection_string = connection_string.copy();
+    c._tx_in_progress = false;
     return (sql::Connection) c;
 }
 
@@ -125,6 +127,54 @@ fn usz! PostgresConnection.exec(PostgresConnection* self, String command, args..
 fn String PostgresConnection.last_error(PostgresConnection* self) @dynamic
 {
     return self._last_error;
+}
+
+fn void! PostgresConnection.tx_begin(PostgresConnection* self) @dynamic
+{
+    if (self._tx_in_progress) {
+        return sql::Error.TX_ALREADY_IN_PROGRESS?;
+    }
+
+    PGresult res = pq_exec(self.conn, "BEGIN");
+
+    pg::ExecStatusType status = pq_result_status(res);
+    if (status != PGRES_COMMAND_OK) {
+        self._last_error = pq_result_error_message(res).str_view();
+        return sql::Error.COMMAND_FAILED?;
+    }
+
+    self._tx_in_progress = true;
+}
+
+fn void! PostgresConnection.tx_commit(PostgresConnection* self) @dynamic
+{
+    PGresult res = pq_exec(self.conn, "COMMIT");
+
+    pg::ExecStatusType status = pq_result_status(res);
+    if (status != PGRES_COMMAND_OK) {
+        self._last_error = pq_result_error_message(res).str_view();
+        return sql::Error.COMMAND_FAILED?;
+    }
+
+    self._tx_in_progress = false;
+}
+
+fn void! PostgresConnection.tx_rollback(PostgresConnection* self) @dynamic
+{
+    PGresult res = pq_exec(self.conn, "ROLLBACK");
+
+    pg::ExecStatusType status = pq_result_status(res);
+    if (status != PGRES_COMMAND_OK) {
+        self._last_error = pq_result_error_message(res).str_view();
+        return sql::Error.COMMAND_FAILED?;
+    }
+
+    self._tx_in_progress = false;
+}
+
+fn bool PostgresConnection.tx_in_progress(PostgresConnection* self) @dynamic
+{
+    return self._tx_in_progress;
 }
 
 // Result

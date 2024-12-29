@@ -4,3 +4,4 @@ pg.h
 *.h
 .DS_Store
 test.sqlite
+.idea
