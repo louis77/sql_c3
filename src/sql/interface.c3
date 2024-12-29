@@ -2,13 +2,13 @@ module sql;
 
 <*
     The Driver interface defines the methods that a SQL driver must implement
-    for managing connections.
+    for managing connections. These are managed by the `sql` module and should
+    not be used directly.
 *>
 interface Driver
 {
-    fn Connection!  open(String connection_string);
-    fn void         close(Connection conn);
-    fn void!        ping(Connection conn);
+    fn Connection!  open(String connection_string); // @private
+    fn void         free(); // @private
 }
 
 <*
@@ -17,6 +17,8 @@ interface Driver
 *>
 interface Connection
 {
+    fn void         close();
+    fn void!        ping();
     fn Result!      query(String command, args...);
     fn usz!         exec(String command, args...);
     fn String       last_error();
@@ -54,4 +56,5 @@ fault Error
     PREPARE_FAILED,
     UNKNOWN_ERROR,
     TX_ALREADY_IN_PROGRESS,
+    UNKNOWN_DRIVER,
 }

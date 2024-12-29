@@ -1,7 +1,6 @@
 module sqlite_test @test;
 
 import std::io;
-import sqlite;
 import sql;
 
 String connection_string = "test.sqlite";
@@ -10,13 +9,10 @@ fn void! test_sqlite_success()
 {
 mem::@report_heap_allocs_in_scope()
 {
-    Driver driver = sqlite::new_driver();
-    defer sqlite::free_driver(driver);
+    sql::Connection conn = sql::open("sqlite", connection_string)!;
+    defer try conn.close();
 
-    sql::Connection conn = driver.open(connection_string)!;
-    defer try driver.close(conn);
-
-    driver.ping(conn)!;
+    conn.ping()!;
 };
 }
 
@@ -24,12 +20,8 @@ fn void! test_sqlite_query()
 {
 mem::@report_heap_allocs_in_scope()
 {
-    Driver driver = sqlite::new_driver();
-    defer sqlite::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer try driver.close(conn);
-
+    sql::Connection conn = sql::open("sqlite", connection_string)!;
+    defer try conn.close();
 
     String cmd = `SELECT 1 as an_int, 'hello' as a_string, TRUE as a_bool, null as a_null
         UNION
@@ -74,10 +66,8 @@ fn void! test_sqlite_fail() {
 mem::@report_heap_allocs_in_scope() {
     String connection_string = "sqlite://WHUUT@loca lhost:3306/test";
 
-    Driver driver = sqlite::new_driver();
-    defer sqlite::free_driver(driver);
-
-    Connection! conn = driver.open(connection_string);
+    sql::Connection! conn = sql::open("sqlite", connection_string);
+    defer try (void)conn.close();
 
     if (catch excuse = conn) {
         return; // This is what we expect
@@ -89,11 +79,8 @@ mem::@report_heap_allocs_in_scope() {
 
 fn void! test_sqlite_exec() {
 mem::@report_heap_allocs_in_scope() {
-    Driver driver = sqlite::new_driver();
-    defer sqlite::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer driver.close(conn);
+    sql::Connection conn = sql::open("sqlite", connection_string)!;
+    defer try conn.close();
 
     String cmd = `DROP TABLE IF EXISTS test`;
     conn.exec(cmd)!;
@@ -110,11 +97,8 @@ mem::@report_heap_allocs_in_scope() {
 
 fn void! test_sqlite_malformed_query() {
 mem::@report_heap_allocs_in_scope() {
-    Driver driver = sqlite::new_driver();
-    defer sqlite::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer driver.close(conn);
+    sql::Connection conn = sql::open("sqlite", connection_string)!;
+    defer try conn.close();
 
     String cmd = `SELECT * FR OM what?`;
     Result! res = conn.query(cmd);
@@ -132,11 +116,8 @@ mem::@report_heap_allocs_in_scope() {
 
 fn void! test_sqlite_parameterized_query() {
 mem::@report_heap_allocs_in_scope() {
-    Driver driver = sqlite::new_driver();
-    defer sqlite::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer try driver.close(conn);
+    sql::Connection conn = sql::open("sqlite", connection_string)!;
+    defer try conn.close();
 
     /* SQLite supports the following parameterized query syntax:
         ?
@@ -173,11 +154,8 @@ mem::@report_heap_allocs_in_scope() {
 fn void! test_sqlite_transaction_success() {
 mem::@report_heap_allocs_in_scope()
 {
-    Driver driver = sqlite::new_driver();
-    defer sqlite::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer try driver.close(conn);
+    sql::Connection conn = sql::open("sqlite", connection_string)!;
+    defer try conn.close();
 
     conn.tx_begin()!;
     defer (catch err) {
@@ -217,11 +195,8 @@ mem::@report_heap_allocs_in_scope()
 fn void! test_sqlite_transaction_rollback() {
 mem::@report_heap_allocs_in_scope()
 {
-    Driver driver = sqlite::new_driver();
-    defer sqlite::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer try driver.close(conn);
+    sql::Connection conn = sql::open("sqlite", connection_string)!;
+    defer try conn.close();
 
     String cmd = `DROP TABLE IF EXISTS test`;
     conn.exec(cmd)!;
@@ -257,11 +232,8 @@ mem::@report_heap_allocs_in_scope()
 fn void! test_sqlite_double_transaction() {
 mem::@report_heap_allocs_in_scope()
 {
-    Driver driver = sqlite::new_driver();
-    defer sqlite::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer try driver.close(conn);
+    sql::Connection conn = sql::open("sqlite", connection_string)!;
+    defer try conn.close();
 
     if (catch excuse = conn.tx_begin()) {
         assert(excuse == sql::Error.TX_ALREADY_IN_PROGRESS, "Transaction should be already in progress");

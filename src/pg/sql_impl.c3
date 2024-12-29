@@ -20,22 +20,27 @@ struct PostgresConnection (sql::Connection) {
     bool   _tx_in_progress;
 }
 
-
-fn Postgres* new_driver() {
-    Postgres* pg = mem::new(Postgres);
-    return pg;
-}
-
 // Driver
 
-fn void free_driver(Driver pg) {
-    // TODO: Call Postgres destructor
-    free((Postgres*)pg);
+fn void Postgres.free(Postgres* self) @dynamic {
+    free((Postgres*)self);
 }
+
+fn void register_driver() @init @private {
+    Postgres* db = mem::new(Postgres);
+    sql::register_driver("postgres", db);
+}
+
 
 fn sql::Connection! Postgres.open(Postgres* self, String connection_string) @dynamic
 {
     PGconn conn = pq_connectdb((ZString)connection_string);
+    ConnStatusType dbstatus = pq_status(conn);
+    if (dbstatus != CONNECTION_OK)
+    {
+        return sql::Error.CONNECTION_FAILURE?;
+    }
+
     PostgresConnection* c = mem::new(PostgresConnection);
     c.conn = conn;
     c.connection_string = connection_string.copy();
@@ -43,18 +48,11 @@ fn sql::Connection! Postgres.open(Postgres* self, String connection_string) @dyn
     return (sql::Connection) c;
 }
 
-fn void Postgres.close(Postgres* self, sql::Connection conn) @dynamic
-{
-    PostgresConnection* c = (PostgresConnection*)conn;
-    pq_finish(c.conn);
-    free(c.connection_string);
-    free(c);
-}
+// Connection
 
-fn void! Postgres.ping(Postgres* self, sql::Connection conn) @dynamic
+fn void! PostgresConnection.ping(PostgresConnection* self) @dynamic
 {
-    PostgresConnection* c = (PostgresConnection*)conn;
-    PGconn tmp_conn = pq_connectdb((ZString)c.connection_string);
+    PGconn tmp_conn = pq_connectdb((ZString)self.connection_string);
     ConnStatusType dbstatus = pq_status(tmp_conn);
     if (dbstatus != CONNECTION_OK)
     {
@@ -62,7 +60,12 @@ fn void! Postgres.ping(Postgres* self, sql::Connection conn) @dynamic
     }
 }
 
-// Connection
+fn void PostgresConnection.close(PostgresConnection* self) @dynamic
+{
+    pq_finish(self.conn);
+    free(self.connection_string);
+    free(self);
+}
 
 fn PGresult! bind_parameters_and_exec(PostgresConnection* self, String command, args...) @private
 {

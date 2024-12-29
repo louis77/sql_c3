@@ -18,14 +18,14 @@ cd sql_c3
 c3c test
 ```
 
-Make sure to change the linker paths in `project.json` to point to your `libpq` and `mysql-client` installation.
+Make sure to change the linker paths in `project.json` to point to your `libpq`, `mysql-client` or `sqlite` installation.
 
 ## Supported databases
 
-- [X] PostgreSQL (must install `libpq`)
-- [X] MySQL 8+ (must install `mysql-client`)
-- [X] SQLite 3+  (must install `sqlite3`)
-
+- [X] PostgreSQL (driver_id: `postgres`) (must install `libpq`)
+- [X] MySQL 8+ (driver_id: `mysql`) (must install `mysql-client`)
+- [X] SQLite 3+  (driver_id: `sqlite`) (must install `sqlite3`)
+s
 ## Usage
 
 This package contains the following modules:
@@ -41,17 +41,12 @@ Generally, this is how you would use the `sql` module:
 
 ```kotlin
 import sql;
-import pg;
 
 fn void main()
 {
-    // First load the driver
-    Driver driver = pg::new_driver();
-    defer pg::free_driver(driver);
-
     // Open a connection
-    void* conn = driver.open("postgres://postgres@localhost/postgres");
-    defer driver.close(conn);
+    sql::Connection conn = sql::open("postgres", "postgres://postgres@localhost/postgres")!;
+    defer try conn.close();
 
     // Make a simple query
     String cmd = "SELECT * FROM (VALUES(1, 'hello', null), (2, 'world', null)) AS t(a_num, a_string, a_null)";
@@ -79,15 +74,15 @@ See the [test](test) folder for examples of how to use the `sql` module.
 The `sql` package has the following API:
 
 ```kotlin
-interface Driver
-{
-    fn Connection!  open(String connection_string);
-    fn void         close(Connection conn);
-    fn void!        ping(Connection conn);
-}
+fn Connection! open(String driver_id, String connection_string);
+
+// The driver_id is registered by the respective driver module.
+// See the drivers section for how to register a driver.
 
 interface Connection
 {
+    fn void         close();
+    fn void!        ping();
     fn Result!      query(String command, args...);
     fn usz!         exec(String command, args...);
     fn String       last_error();
@@ -153,7 +148,22 @@ If you scan into a pointer type, it will be set to `null` if the result was SQL 
 
 Other types will currently return a `UNSUPPORTED_SCAN_TYPE` fault.
 
-## Limitations
+## Drivers
+
+The drivers are implemented as `sql::Driver` objects. They are registered with the `sql` module and can be used with the `sql::open` function.
+
+A driver is expected to register itself with the `sql` module using the `sql::register_driver` function:
+
+```kotlin
+fn void register_driver() @init @private {
+    Postgres* db = mem::new(Postgres);
+    sql::register_driver("postgres", db);
+}
+```
+
+A driver must implement the `sql::Driver` interface, which contains a `free` method that will be called when the driver is unregistered on shutdown. The various driver modules provide for ample examples on how to implement a custom driver.
+
+## Project status
 
 The library is work in progress and is still missing a lot of features. Ultimately the plan is to make it fully usable for all your SQL needs.
 

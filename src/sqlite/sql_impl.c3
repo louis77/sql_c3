@@ -19,16 +19,15 @@ struct SqliteConnection (sql::Connection) {
     bool            _tx_in_progress;
 }
 
-fn SqliteDriver* new_driver() {
-    // There is nothing to do
-    SqliteDriver* db = mem::new(SqliteDriver);
-    return db;
-}
-
 // Driver
 
-fn void free_driver(Driver db) {
-    free((SqliteDriver*)db);
+fn void SqliteDriver.free(SqliteDriver* self) @dynamic {
+    free((SqliteDriver*)self);
+}
+
+fn void register_driver() @init @private {
+    SqliteDriver* db = mem::new(SqliteDriver);
+    sql::register_driver("sqlite", db);
 }
 
 fn sql::Connection! SqliteDriver.open(SqliteDriver* self, String connection_string) @dynamic
@@ -49,21 +48,20 @@ fn sql::Connection! SqliteDriver.open(SqliteDriver* self, String connection_stri
     return conn;
 }
 
-fn void SqliteDriver.close(SqliteDriver* self, sql::Connection conn) @dynamic
-{
-    SqliteConnection* c = (SqliteConnection*)conn;
-    sqlite3_close(c.conn);
-    free(c);
-}
+// Connection
 
-fn void! SqliteDriver.ping(SqliteDriver* self, sql::Connection conn) @dynamic
+fn void! SqliteConnection.ping(SqliteConnection* self) @dynamic
 {
     // sqlite is file-based, there is nothing to ping.
     // when the connection is created, we assume everything is ok.
     return;
 }
 
-// Connection
+fn void SqliteConnection.close(SqliteConnection* self) @dynamic
+{
+    sqlite3_close(self.conn);
+    free(self);
+}
 
 fn void! bind_parameters(SqliteConnection* self, SqliteStmt stmt, args...) @private
 {

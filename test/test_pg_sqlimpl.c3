@@ -1,34 +1,23 @@
 module pg_test @test;
 
 import std::io;
-import pg;
 import sql;
 
 String connection_string = "postgres://postgres@localhost/postgres";
 
 fn void! test_pg_success() {
 mem::@report_heap_allocs_in_scope() {
-    Driver driver = pg::new_driver();
-    defer pg::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer driver.close(conn);
-
-    driver.ping(conn)!;
+    sql::Connection! conn = sql::open("postgres", connection_string);
+    conn.ping()!;
+    conn.close()!;
 };
 }
 
 fn void! test_pg_fail() {
 mem::@report_heap_allocs_in_scope() {
     String connection_string = "postgres://postgres@THISISWRONG/postgres";
-
-    Driver driver = pg::new_driver();
-    defer pg::free_driver(driver);
-
-    Connection conn = driver.open(connection_string)!;
-    defer driver.close(conn);
-
-    if (catch error = driver.ping(conn)) {
+    sql::Connection! conn = sql::open("postgres", connection_string);
+    if (catch error = conn.ping()) {
         return; // This is what we expect
     }
 
@@ -38,11 +27,8 @@ mem::@report_heap_allocs_in_scope() {
 
 fn void! test_pg_query() {
 mem::@report_heap_allocs_in_scope() {
-    Driver driver = pg::new_driver();
-    defer pg::free_driver(driver);
-
-    Connection conn = driver.open("postgres://postgres@localhost/postgres")!;
-    defer driver.close(conn);
+    sql::Connection conn = sql::open("postgres", "postgres://postgres@localhost/postgres")!;
+    defer try conn.close();
 
     String cmd = `SELECT * FROM (VALUES
         (1, 'hello', true, null),
@@ -86,11 +72,8 @@ mem::@report_heap_allocs_in_scope() {
 
 fn void! test_pg_malformed_query() {
 mem::@report_heap_allocs_in_scope() {
-    Driver driver = pg::new_driver();
-    defer pg::free_driver(driver);
-
-    Connection conn = driver.open("postgres://postgres@localhost/postgres")!;
-    defer driver.close(conn);
+    sql::Connection conn = sql::open("postgres", "postgres://postgres@localhost/postgres")!;
+    defer try conn.close();
 
     String cmd = `SELECT * FR OM what?`;
     Result! res = conn.query(cmd);
@@ -109,11 +92,8 @@ mem::@report_heap_allocs_in_scope() {
 
 fn void! test_pg_exec() {
 mem::@report_heap_allocs_in_scope() {
-    Driver driver = pg::new_driver();
-    defer pg::free_driver(driver);
-
-    Connection conn = driver.open("postgres://postgres@localhost/postgres")!;
-    defer driver.close(conn);
+    sql::Connection conn = sql::open("postgres", "postgres://postgres@localhost/postgres")!;
+    defer try conn.close();
 
     String cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS test (col INT)`;
     if (catch excuse = conn.exec(cmd)) {
@@ -135,11 +115,8 @@ mem::@report_heap_allocs_in_scope() {
 
 fn void! test_pg_parameterized_query() {
 mem::@report_heap_allocs_in_scope() {
-    Driver driver = pg::new_driver();
-    defer pg::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer try driver.close(conn);
+    sql::Connection conn = sql::open("postgres", connection_string)!;
+    defer try conn.close();
 
     String expect2 = "efgh";
     String expect = "abcd"; // TODO Test all possible types
@@ -167,11 +144,8 @@ mem::@report_heap_allocs_in_scope() {
 fn void! test_pg_transaction_success() {
 mem::@report_heap_allocs_in_scope()
 {
-    Driver driver = pg::new_driver();
-    defer pg::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer try driver.close(conn);
+    sql::Connection conn = sql::open("postgres", connection_string)!;
+    defer try conn.close();
 
     conn.tx_begin()!;
     defer (catch err) {
@@ -215,11 +189,8 @@ mem::@report_heap_allocs_in_scope()
 fn void! test_pg_transaction_rollback() {
 mem::@report_heap_allocs_in_scope()
 {
-    Driver driver = pg::new_driver();
-    defer pg::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer try driver.close(conn);
+    sql::Connection conn = sql::open("postgres", connection_string)!;
+    defer try conn.close();
 
     String cmd = `DROP TABLE IF EXISTS test`;
     conn.exec(cmd)!;
@@ -258,11 +229,8 @@ mem::@report_heap_allocs_in_scope()
 fn void! test_pg_double_transaction() {
 mem::@report_heap_allocs_in_scope()
 {
-    Driver driver = pg::new_driver();
-    defer pg::free_driver(driver);
-
-    sql::Connection conn = driver.open(connection_string)!;
-    defer try driver.close(conn);
+    sql::Connection conn = sql::open("postgres", connection_string)!;
+    defer try conn.close();
 
     if (catch excuse = conn.tx_begin()) {
         assert(excuse == sql::Error.TX_ALREADY_IN_PROGRESS, "Transaction should be already in progress");

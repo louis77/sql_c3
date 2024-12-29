@@ -22,17 +22,17 @@ struct MysqlConnection (sql::Connection) {
     bool   autocommit;
 }
 
-fn MysqlDriver* new_driver() {
-    mysql_library_init(0, null, null); // TODO should we check for the return value?
-    MysqlDriver* db = mem::new(MysqlDriver);
-    return db;
-}
-
 // Driver
 
-fn void free_driver(Driver db) {
+fn void MysqlDriver.free(MysqlDriver* self) @dynamic {
     mysql_library_end();
-    free((MysqlDriver*)db);
+    free((MysqlDriver*)self);
+}
+
+fn void register_driver() @init @private {
+    mysql_library_init(0, null, null); // TODO should we check for the return value?
+    MysqlDriver* db = mem::new(MysqlDriver);
+    sql::register_driver("mysql", db);
 }
 
 fn sql::Connection! MysqlDriver.open(MysqlDriver* self, String connection_string) @dynamic
@@ -65,23 +65,21 @@ fn sql::Connection! MysqlDriver.open(MysqlDriver* self, String connection_string
     return conn;
 }
 
-fn void MysqlDriver.close(MysqlDriver* self, sql::Connection conn) @dynamic
-{
-    MysqlConnection* c = (MysqlConnection*)conn;
-    mysql_close(c.conn);
-    free(c);
-}
+// Connection
 
-fn void! MysqlDriver.ping(MysqlDriver* self, sql::Connection conn) @dynamic
+fn void! MysqlConnection.ping(MysqlConnection* self) @dynamic
 {
-    MysqlConnection* c = (MysqlConnection*)conn;
-    if (mysql_ping(c.conn) != 0) {
+    if (mysql_ping(self.conn) != 0) {
         return sql::Error.CONNECTION_FAILURE?;
     }
     return;
 }
 
-// Connection
+fn void MysqlConnection.close(MysqlConnection* self) @dynamic
+{
+    mysql_close(self.conn);
+    free(self);
+}
 
 fn void! bind_parameters(MysqlStmt stmt, args...) @private
 {
