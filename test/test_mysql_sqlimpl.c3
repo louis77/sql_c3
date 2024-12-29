@@ -67,7 +67,10 @@ mem::@report_heap_allocs_in_scope(false)
 };
 }
 
-fn void! test_mysql_fail() {
+fn void! test_mysql_fail()
+{
+mem::@report_heap_allocs_in_scope()
+{
     String connection_string = "mysql://WHUUT@loca lhost:3306/test";
 
     Driver driver = mysql8::new_driver();
@@ -80,9 +83,13 @@ fn void! test_mysql_fail() {
     }
 
     assert(false, "Connection should have failed");
+};
 }
 
-fn void! test_mysql_exec() {
+fn void! test_mysql_exec()
+{
+mem::@report_heap_allocs_in_scope()
+{
     Driver driver = mysql8::new_driver();
     defer mysql8::free_driver(driver);
 
@@ -99,9 +106,12 @@ fn void! test_mysql_exec() {
     cmd = `INSERT INTO test VALUES (1)`;
     affected_rows = conn.exec(cmd) ?? 0;
     assert(affected_rows == 1, "INSERT INTO should affect 1 row");
+};
 }
 
 fn void! test_mysql_malformed_query() {
+mem::@report_heap_allocs_in_scope()
+{
     Driver driver = mysql8::new_driver();
     defer mysql8::free_driver(driver);
 
@@ -119,9 +129,12 @@ fn void! test_mysql_malformed_query() {
     }
 
     assert(false, "Query should have failed");
+};
 }
 
 fn void! test_mysql_parameterized_query() {
+mem::@report_heap_allocs_in_scope()
+{
     Driver driver = mysql8::new_driver();
     defer mysql8::free_driver(driver);
 
@@ -132,6 +145,7 @@ fn void! test_mysql_parameterized_query() {
     String expect = "abcd";
     String cmd = `SELECT ? as a_param, ? as b_param`;
     Result res = conn.query(cmd, expect, expect2)!;
+    defer res.close();
 
     assert(res.next(), "expected at least one row, got none");
 
@@ -142,4 +156,5 @@ fn void! test_mysql_parameterized_query() {
 
     assert(a_param == expect);
     assert(b_param == expect2);
+};
 }

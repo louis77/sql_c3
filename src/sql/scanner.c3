@@ -15,9 +15,9 @@ macro @convert_builder_value(builder, dest, is_null)
 {
     switch (dest) {
         case String:
-            *dest = builder.str_view().copy();
+            *dest = builder.str_view();
         case String*:
-            @set_null_value(dest, builder.str_view().copy(), is_null);
+            @set_null_value(dest, builder.str_view(), is_null);
         case ZString:
             *dest = builder.zstr_view();
         case ZString*:

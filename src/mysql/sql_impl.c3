@@ -84,13 +84,13 @@ fn void! MysqlDriver.ping(MysqlDriver* self, sql::Connection conn) @dynamic
 fn void! bind_parameters(MysqlStmt stmt, args...) @private
 {
     MysqlBind* binds = calloc(MysqlBind.sizeof * args.len);
-
+    defer free(binds);
     MysqlBind bind;
+
     foreach (idx, val : args) {
         bind.buffer_type = MYSQL_TYPE_VARCHAR;
         usz bytes_printed;
-        DString out;
-	    out.new_init();
+        DString out = dstring::new(allocator:allocator::temp());
         bytes_printed = out.appendf("%s", val)!;
         bind.buffer_length = bytes_printed;
         bind.buffer = out.str_view();
@@ -139,6 +139,7 @@ fn sql::Result! MysqlConnection.query(MysqlConnection* self, String command, arg
     // later fetch columns individually via fetch_column()
 
     MysqlBind* empty_bind = calloc(MysqlBind.sizeof * result.num_fields);
+    defer free(empty_bind);
     for (int idx = 0; idx < result.num_fields; idx++) {
         empty_bind[idx].buffer = (void *)0;
         empty_bind[idx].buffer_length = 0;
@@ -208,7 +209,7 @@ fn void! MysqlResult.scan(MysqlResult* self, int fieldnum, any dest) @dynamic
         return sql::Error.ILLEGAL_COLUMN_ACCESS?;
     }
 
-    DString builder = dstring::new("");
+    DString builder = dstring::new(allocator:allocator::temp());
 
     usz chunk = 0;
     usz ret_size = 0;
@@ -216,8 +217,10 @@ fn void! MysqlResult.scan(MysqlResult* self, int fieldnum, any dest) @dynamic
     CULong offset = 0;
     bool is_null;
     ZString buffer = (ZString)calloc(char.sizeof * buffer_size);
+    defer free(buffer);
 
     MysqlBind* bind = calloc(MysqlBind.sizeof);
+    defer free(bind);
     bind.buffer_type = MYSQL_TYPE_VARCHAR;
     bind.buffer = buffer;
     bind.buffer_length = buffer_size;
@@ -246,5 +249,6 @@ fn void! MysqlResult.scan(MysqlResult* self, int fieldnum, any dest) @dynamic
 fn void MysqlResult.close(MysqlResult* self) @dynamic
 {
     mysql_stmt_free_result(self.stmt);
+    free(self);
     return;
 }
