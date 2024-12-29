@@ -45,6 +45,8 @@ fn void Postgres.close(Postgres* self, sql::Connection conn) @dynamic
 {
     PostgresConnection* c = (PostgresConnection*)conn;
     pq_finish(c.conn);
+    free(c.connection_string);
+    free(c);
 }
 
 fn void! Postgres.ping(Postgres* self, sql::Connection conn) @dynamic
@@ -66,11 +68,14 @@ fn PGresult! bind_parameters_and_exec(PostgresConnection* self, String command, 
     ZString[]  paramValues = mem::new_array(ZString, args.len);
     CInt[]     paramLengths = mem::new_array(CInt, args.len);
     CInt[]     paramFormats = mem::new_array(CInt, args.len);
+    defer free(paramTypes);
+    defer free(paramValues);
+    defer free(paramLengths);
+    defer free(paramFormats);
 
     foreach (idx, val : args) {
         usz bytes_printed;
-        DString out;
-	    out.new_init();
+        DString out = dstring::new(allocator:allocator::temp());
         bytes_printed = out.appendf("%s", val)!;
 
         paramTypes[idx] = pg::Oid.CSTRINGOID.oid;
@@ -94,9 +99,9 @@ fn PGresult! bind_parameters_and_exec(PostgresConnection* self, String command, 
 
 fn sql::Result! PostgresConnection.query(PostgresConnection* self, String command, args...) @dynamic
 {
-    PostgresResult* res = mem::new(PostgresResult);
     PGresult result = bind_parameters_and_exec(self, command, ...args)!;
 
+    PostgresResult* res = mem::new(PostgresResult);
     res.row_count = pq_ntuples(result);
     res.current_row = -1;
     res.result = result;
@@ -106,7 +111,6 @@ fn sql::Result! PostgresConnection.query(PostgresConnection* self, String comman
 
 fn usz! PostgresConnection.exec(PostgresConnection* self, String command, args...) @dynamic
 {
-    PostgresResult* res = mem::new(PostgresResult);
     PGresult result = bind_parameters_and_exec(self, command, ...args)!;
 
     ZString affected_rows_str = pq_cmd_tuples(result);
@@ -151,7 +155,7 @@ fn void! PostgresResult.scan(PostgresResult* self, int fieldnum, any dest) @dyna
         tmp_value = "";
     }
 
-    DString builder = dstring::new("");
+    DString builder = dstring::new(allocator:allocator::temp());
     builder.append(tmp_value.str_view());
 
     // Sadly our driver currently always returns values as string

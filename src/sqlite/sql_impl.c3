@@ -72,8 +72,7 @@ fn void! bind_parameters(SqliteConnection* self, SqliteStmt stmt, args...) @priv
             ret = sqlite::sqlite3_bind_null(stmt, (CInt)idx+1);
         } else {
             usz bytes_printed;
-            DString out;
-            out.new_init();
+            DString out = dstring::new(allocator:allocator::temp());
             bytes_printed = out.appendf("%s", val)!;
 
             ret = sqlite::sqlite3_bind_text(stmt, (CInt)idx+1, out.zstr_view(), (int)out.len(), null);

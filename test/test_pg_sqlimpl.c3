@@ -7,6 +7,7 @@ import sql;
 String connection_string = "postgres://postgres@localhost/postgres";
 
 fn void! test_pg_success() {
+mem::@report_heap_allocs_in_scope() {
     Driver driver = pg::new_driver();
     defer pg::free_driver(driver);
 
@@ -14,9 +15,11 @@ fn void! test_pg_success() {
     defer driver.close(conn);
 
     driver.ping(conn)!;
+};
 }
 
 fn void! test_pg_fail() {
+mem::@report_heap_allocs_in_scope() {
     String connection_string = "postgres://postgres@THISISWRONG/postgres";
 
     Driver driver = pg::new_driver();
@@ -30,9 +33,11 @@ fn void! test_pg_fail() {
     }
 
     assert(false, "Connection should have failed");
+};
 }
 
 fn void! test_pg_query() {
+mem::@report_heap_allocs_in_scope() {
     Driver driver = pg::new_driver();
     defer pg::free_driver(driver);
 
@@ -44,6 +49,7 @@ fn void! test_pg_query() {
         (2, 'world', false, null))
     AS t(a_num, a_string, a_bool, a_null)`;
     Result res = conn.query(cmd)!;
+    defer res.close();
 
     usz count = 0;
     while (res.next()) {
@@ -75,9 +81,11 @@ fn void! test_pg_query() {
     }
 
     assert(count == 2, "Should have fetched one row");
+};
 }
 
 fn void! test_pg_malformed_query() {
+mem::@report_heap_allocs_in_scope() {
     Driver driver = pg::new_driver();
     defer pg::free_driver(driver);
 
@@ -95,10 +103,12 @@ fn void! test_pg_malformed_query() {
     }
 
     assert(false, "Query should have failed");
+};
 }
 
 
 fn void! test_pg_exec() {
+mem::@report_heap_allocs_in_scope() {
     Driver driver = pg::new_driver();
     defer pg::free_driver(driver);
 
@@ -120,9 +130,11 @@ fn void! test_pg_exec() {
         return excuse?;
     }
     assert(affected_rows == 3, "Query didn't affect 3 rows");
+};
 }
 
 fn void! test_pg_parameterized_query() {
+mem::@report_heap_allocs_in_scope() {
     Driver driver = pg::new_driver();
     defer pg::free_driver(driver);
 
@@ -138,7 +150,7 @@ fn void! test_pg_parameterized_query() {
         io::printn(conn.last_error());
         return excuse?;
     }
-
+    defer res.close();
     assert(res.next(), "expected at least one row, got none");
 
     String a_param;
@@ -148,4 +160,5 @@ fn void! test_pg_parameterized_query() {
 
     assert(a_param == expect);
     assert(b_param == expect2);
+};
 }

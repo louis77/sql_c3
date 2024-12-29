@@ -71,6 +71,7 @@ mem::@report_heap_allocs_in_scope()
 }
 
 fn void! test_sqlite_fail() {
+mem::@report_heap_allocs_in_scope() {
     String connection_string = "sqlite://WHUUT@loca lhost:3306/test";
 
     Driver driver = sqlite::new_driver();
@@ -83,9 +84,11 @@ fn void! test_sqlite_fail() {
     }
 
     assert(false, "Connection should have failed");
+};
 }
 
 fn void! test_sqlite_exec() {
+mem::@report_heap_allocs_in_scope() {
     Driver driver = sqlite::new_driver();
     defer sqlite::free_driver(driver);
 
@@ -102,9 +105,11 @@ fn void! test_sqlite_exec() {
     cmd = `INSERT INTO test VALUES (1)`;
     affected_rows = conn.exec(cmd) ?? 0;
     assert(affected_rows == 1, "INSERT INTO should affect 1 row, got: '%d'", affected_rows);
+};
 }
 
 fn void! test_sqlite_malformed_query() {
+mem::@report_heap_allocs_in_scope() {
     Driver driver = sqlite::new_driver();
     defer sqlite::free_driver(driver);
 
@@ -122,9 +127,11 @@ fn void! test_sqlite_malformed_query() {
     }
 
     assert(false, "Query should have failed");
+};
 }
 
 fn void! test_sqlite_parameterized_query() {
+mem::@report_heap_allocs_in_scope() {
     Driver driver = sqlite::new_driver();
     defer sqlite::free_driver(driver);
 
@@ -149,7 +156,7 @@ fn void! test_sqlite_parameterized_query() {
         io::printn(conn.last_error());
         return excuse?;
     }
-
+    defer res.close();
     assert(res.next(), "expected at least one row, got none");
 
     String a_param;
@@ -159,4 +166,5 @@ fn void! test_sqlite_parameterized_query() {
 
     assert(a_param == expect);
     assert(b_param == expect2);
+};
 }
