@@ -19,6 +19,11 @@ fn void deallocate_drivers() @finalizer @private {
     };
 }
 
+<*
+    opens a connection to a database.
+    @param driver_id `The id of the driver to use, i.e. "postgres", "mysql", "sqlite"`
+    @param connection_string `The connection string as a URL`
+*>
 fn Connection! open(String driver_id, String connection_string)
 {
     Driver! driver = registry.get(driver_id);

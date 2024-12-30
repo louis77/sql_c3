@@ -1,0 +1,11 @@
+{
+  "provides": "sqlite",
+  "targets": {
+    "macos-aarch64": {
+      "dependencies": [],
+      "linked-libraries": [
+        "sqlite3"
+      ]
+    }
+  }
+}

@@ -70,7 +70,6 @@ fn void main()
 
 See the [test](test) folder for examples of how to use the `sql` module.
 
-
 The `sql` package has the following API:
 
 ```kotlin
@@ -120,7 +119,6 @@ fault Error
 All supported drivers use parameter binding to safely pass arguments to queries. All types that implement the `Printable` interface are supported.
 
 The SQL syntax to indicate parameters in a query depend on the database. For example, PostgreSQL uses `$1`, `$2` etc. For MySQL, use `?`. For SQLite, use `?`, `?N`, `:N`, `@N` or `$N` where `N` is the index of the parameter (starting at 1).
-
 
 ### Scanning results
 
@@ -178,13 +176,16 @@ Currently supported:
 In progress:
 
 - [ ] Fix some memory leaks
-- [ ] Prepared statements
+- [ ] Prepared statements (currently used internally, but not exposed to the user)
 - [ ] Connection pooling
-- [ ] Named parameters
-- [ ] Multiple result sets
 - [ ] Support for Custom scannable types (SQLValue)
 - [ ] Support for DB specific types
+- [ ] Use binary encoding of params/result values
 
+On-demand:
+
+- [ ] Multiple result sets
+- [ ] Named parameters (i.e. used by MS SQL Servers)
 
 ## LICENSE
 

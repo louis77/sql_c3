@@ -1,0 +1,11 @@
+{
+  "provides": "pg",
+  "targets": {
+    "macos-aarch64": {
+      "dependencies": [],
+      "linked-libraries": [
+        "pq"
+      ]
+    }
+  }
+}

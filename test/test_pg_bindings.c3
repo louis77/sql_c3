@@ -1,59 +1,61 @@
-module pg @test;
+module pg_tests @test;
 
 import std::io;
+import pg;
 
 ZString connection_string = "postgres://postgres@localhost/postgres";
+
 
 fn void! test_all()
 {
 mem::@report_heap_allocs_in_scope() {
-	CInt libversion = pq_lib_version();
+	CInt libversion = pg::pq_lib_version();
     assert(libversion > 0, "Lib version should be greater than 0");
 
-	PGconn conn = pq_connectdb(connection_string);
+	PGconn conn = pg::pq_connectdb(connection_string);
 
     // At this point, the connection is not established yet
 
-	ConnStatusType dbstatus = pq_status(conn);
+	ConnStatusType dbstatus = pg::pq_status(conn);
     assert(dbstatus == CONNECTION_OK);
 
-	ZString dbname = pq_db(conn);
+	ZString dbname = pg::pq_db(conn);
     assert(ZString.str_view(dbname) == "postgres");
 
-	ZString dbuser = pq_user(conn);
+	ZString dbuser = pg::pq_user(conn);
 	assert(ZString.str_view(dbuser) == "postgres");
 
-	ZString dbhost = pq_host(conn);
+	ZString dbhost = pg::pq_host(conn);
 	assert(ZString.str_view(dbhost) == "localhost");
 
-	ZString dbhostaddr = pq_hostaddr(conn);
-	ZString dbport = pq_port(conn);
-	ZString dboptions = pq_options(conn);
+	ZString dbhostaddr = pg::pq_hostaddr(conn);
+	ZString dbport = pg::pq_port(conn);
+	ZString dboptions = pg::pq_options(conn);
 
-	PGresult result = pq_exec(conn, "SELECT 'Hello, World' AS hello, NULL as world");
-	ExecStatusType result_status = pq_result_status(result);
+	PGresult result = pg::pq_exec(conn, "SELECT 'Hello, World' AS hello, NULL as world");
+	ExecStatusType result_status = pg::pq_result_status(result);
 	assert(result_status == PGRES_TUPLES_OK);
 
-	CInt ntuples = pq_ntuples(result);
+	CInt ntuples = pg::pq_ntuples(result);
 	assert(ntuples == 1, "wrong number of tuples returned, expected 1");
 
-	CInt nfields = pq_nfields(result);
+	CInt nfields = pg::pq_nfields(result);
 	assert(nfields == 2, "wrong number of fields returned, expected 2");
 
-	ZString cmd_status = pq_cmd_status(result);
+	ZString cmd_status = pg::pq_cmd_status(result);
 	assert(ZString.str_view(cmd_status) == "SELECT 1");
 
 	for (int i = 0; i < nfields; i++)
 	{
-		ZString fname = pq_fname(result, i);
+		ZString fname = pg::pq_fname(result, i);
 
-		CInt fnumber = pq_fnumber(result, fname);
+		CInt fnumber = pg::pq_fnumber(result, fname);
 		assert(fnumber == i);
 
-		ColumnFormatCode fformat = pq_fformat(result, i);
+		ColumnFormatCode fformat = pg::pq_fformat(result, i);
 		assert(fformat == TEXT);
 
-		CInt ftype = pq_ftype(result, i);
+		CInt ftype = pg::pq_ftype(result, i);
 		assert(ftype == 25);
 		assert(oid_from_int(ftype) == TEXTOID);
 	}
@@ -62,13 +64,13 @@ mem::@report_heap_allocs_in_scope() {
 	{
 		for (int j = 0; j < nfields; j++)
 		{
-			ZString value = pq_getvalue(result, i, j);
-			bool is_null = pq_getisnull(result, i, j);
+			ZString value = pg::pq_getvalue(result, i, j);
+			bool is_null = pg::pq_getisnull(result, i, j);
 		}
 	}
 
-	pq_clear(result);
-	pq_finish(conn);
+	pg::pq_clear(result);
+	pg::pq_finish(conn);
 };
 }
 
@@ -76,17 +78,17 @@ fn void! test_cmd_tuples()
 {
 mem::@report_heap_allocs_in_scope()
 {
-	PGconn conn = pq_connectdb(connection_string);
-	ConnStatusType dbstatus = pq_status(conn);
+	PGconn conn = pg::pq_connectdb(connection_string);
+	ConnStatusType dbstatus = pg::pq_status(conn);
     assert(dbstatus == CONNECTION_OK);
 
-	PGresult result = pq_exec(conn, "CREATE TEMPORARY TABLE test (col INT)");
-	ZString cmd_status = pq_cmd_status(result);
+	PGresult result = pg::pq_exec(conn, "CREATE TEMPORARY TABLE test (col INT)");
+	ZString cmd_status = pg::pq_cmd_status(result);
 
-	result = pq_exec(conn, "INSERT INTO test VALUES (1)");
-	ZString ntuples = pq_cmd_tuples(result);
+	result = pg::pq_exec(conn, "INSERT INTO test VALUES (1)");
+	ZString ntuples = pg::pq_cmd_tuples(result);
 
-	pq_clear(result);
-	pq_finish(conn);
+	pg::pq_clear(result);
+	pg::pq_finish(conn);
 };
 }

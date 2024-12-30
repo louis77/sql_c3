@@ -1,0 +1,11 @@
+{
+  "provides": "mysql8",
+  "targets": {
+    "macos-aarch64": {
+      "dependencies": [],
+      "linked-libraries": [
+        "mysqlclient"
+      ]
+    }
+  }
+}

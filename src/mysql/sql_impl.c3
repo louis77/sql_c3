@@ -24,6 +24,9 @@ struct MysqlConnection (sql::Connection) {
 
 // Driver
 
+<*
+    @return! sql::Error.NOT_IMPLEMENTED
+*>
 fn void MysqlDriver.free(MysqlDriver* self) @dynamic {
     mysql_library_end();
     free((MysqlDriver*)self);
@@ -227,6 +230,10 @@ fn void! MysqlConnection.tx_rollback(MysqlConnection* self) @dynamic
     }
 }
 
+<*
+    @pure
+    @return! sql::Error.NOT_IMPLEMENTED
+*>
 fn bool MysqlConnection.tx_in_progress(MysqlConnection* self) @dynamic
 {
     return !self.autocommit;

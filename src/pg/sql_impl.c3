@@ -173,6 +173,7 @@ fn void! PostgresConnection.tx_rollback(PostgresConnection* self) @dynamic
     }
 
     self._tx_in_progress = false;
+    
 }
 
 fn bool PostgresConnection.tx_in_progress(PostgresConnection* self) @dynamic
