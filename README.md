@@ -1,15 +1,16 @@
 # sql_c3
 
-A C3 SQL package, implementing an interface, types and utilities to handle SQL database connections.
+A C3 SQL package, implementing an interface, types and utilities to handle SQL connections across different database vendors in a unified way.
 
 Database drivers can implement the `sql::Driver` interface and register themselves with the `sql` module. The `sql` module can then be used to create a connection and execute queries.
 
-It also contains a simple implementation of drivers for **PostgreSQL**, **MySQL** and **SQLite**.
+The database bindings have contributed to the [C3 vendor](https://github.com/c3lang/vendor) project. See [Installing](#installing) for instructions how to obtain them.
 
 **This project is WIP, use at your own risk.**
 
-## Installing
+## <a name="installing"></a>Installing
 
+- Make sure you have the latest C3 compiler installed (tested with 0.6.5)
 - Clone the repository (with submodules to also get dependencies) and run the tests:
 
 ```sh
@@ -36,11 +37,11 @@ s
 This package contains the following modules:
 
 - `sql` The user-facing interface
-- `pg` Driver for PostgreSQL (based on `libpq`)
-- `mysql8` Driver for MySQL 8.x (based on `mysql-client@8`)
-- `sqlite` Driver for SQLite 3 (basen on `sqlite`)
+- `pg` Driver implementation for PostgreSQL (based on `libpq`)
+- `mysql8` Driver implementation for MySQL 8.x (based on `mysql-client@8`)
+- `sqlite3` Driver implementation for SQLite 3 (basen on `sqlite3`)
 
-The drivers are bindings for the respective databases. They can be used separately, if you want low-level access to the database system. Though, at the moment, the drivers are not complete, bindings might be missing. **Contributions are welcome**!
+The driver implementations are based on the bindings for the respective databases.
 
 Generally, this is how you would use the `sql` module:
 
@@ -73,7 +74,40 @@ fn void main()
 }
 ```
 
-See the [test](test) folder for examples of how to use the `sql` module.
+See the [test](test) folder for further examples of how to use the `sql` module.
+
+## Connection Pool
+
+There is a simple implementation of a connection pool available. A pool starts a seperate thread that handles the expiration of unused connections.
+
+Usage:
+
+```kotlin
+
+// Instead of a connection, create a pool.
+// You pass the maximum number of connections and the expiration
+// time of unused connection.
+
+sql::Pool pool = sql::create_pool("postgres", "postgres://postgres@localhost/postgres",
+    16, // maximum open connections
+    1000 * time::MS // idle timeout
+    )!;
+defer try pool.free();
+
+// Now you can acquire a new connection.
+// If the pool is full, it throws a sql::Error.POOL_EXHAUSTED fault
+
+sql::Connection conn = pool.acquire()!;
+
+[... do some work ...]
+
+pool.release(conn)!;
+
+// After a connection is released, it will be kept open
+// until the idle timeout is reached
+```
+
+## API
 
 The `sql` package has the following API:
 
@@ -81,7 +115,7 @@ The `sql` package has the following API:
 fn Connection! open(String driver_id, String connection_string);
 
 // The driver_id is registered by the respective driver module.
-// See the drivers section for how to register a driver.
+// See the drivers section for how to register a custom driver.
 
 interface Connection
 {
@@ -98,11 +132,23 @@ interface Connection
     fn bool         tx_in_progress();
 }
 
+
+struct Pool {}
+
+fn Pool!        create_pool(String driver_id, String connection_string, usz max_open_conns, Duration max_idle_timeout, Allocator allocator=allocator::heap());
+fn void!        Pool.free();
+fn Connection!  Pool.acquire();
+fn void!        Pool.release(Connection conn);
+fn usz          Pool.conns_pooled();
+fn usz          Pool.conns_available();
+
+
 interface Result
 {
     fn bool         next();
     fn void!        scan(int fieldnum, any dest);
 }
+
 
 fault Error
 {
@@ -116,6 +162,7 @@ fault Error
     PREPARE_FAILED,
     UNKNOWN_ERROR,
     TX_ALREADY_IN_PROGRESS,
+    POOL_EXHAUSTED,
 }
 ```
 
@@ -177,17 +224,17 @@ Currently supported:
 - [x] Scanning of result values into all native C3 types
 - [x] Parameterized queries
 - [x] Transactions
+- [x] Connection pooling
 
 In progress:
 
 - [ ] Fix some memory leaks
 - [ ] Prepared statements (currently used internally, but not exposed to the user)
-- [ ] Connection pooling
 - [ ] Support for Custom scannable types (SQLValue)
 - [ ] Support for DB specific types
 - [ ] Use binary encoding of params/result values
 
-On-demand:
+On-demand, because the currently supported databases (pq, mysql, sqlite) don't support these features:
 
 - [ ] Multiple result sets
 - [ ] Named parameters (i.e. used by MS SQL Servers)
