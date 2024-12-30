@@ -15,6 +15,11 @@ It also contains a simple implementation of drivers for **PostgreSQL**, **MySQL*
 ```sh
 git clone --recurse-submodules https://github.com/louis77/sql_c3
 cd sql_c3
+
+# Get bindings for pq, mysql8 and sqlite3 from vendor library
+c3c project fetch
+
+# Run tests
 c3c test
 ```
 

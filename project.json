@@ -1,31 +1,17 @@
 {
   "langrev": "1",
-  "warnings": [
-    "no-unused"
-  ],
-  "dependency-search-paths": [
-    "lib"
-  ],
-  "dependencies": [
-    "pq",
-    "mysql8",
-    "sqlite3"
-  ],
-  "authors": [
-    "Louis Brauer <louis@brauer.family>"
-  ],
-  "version": "0.1.0",
-  "sources": [
-    "src/**",
-    "test/**",
-    "vendor/url_c3/src/**"
-  ],
-  "linked-libraries": [],
-  "linker-search-paths": [
-    "/opt/homebrew/Cellar/libpq/17.2/lib/",
-    "/opt/homebrew/Cellar/mysql-client@8.0/8.0.40/lib/",
-    "/opt/homebrew/Cellar/sqlite/3.47.2/lib/"
-  ],
+  "warnings":  [ "no-unused" ],
+  "dependency-search-paths":  [ "lib", "vendor" ],
+  "dependencies":  [ "pq", "mysql8", "sqlite3" ],
+  "authors":  [ "Louis Brauer <louis@brauer.family>" ],
+  "version": "0.2.0",
+  "sources":  [ "src/**", "test/**" ],
+  "linked-libraries":  [  ],
+  "linker-search-paths":  [
+      "/opt/homebrew/Cellar/libpq/17.2/lib/",
+      "/opt/homebrew/Cellar/mysql-client@8.0/8.0.40/lib/",
+      "/opt/homebrew/Cellar/sqlite/3.47.2/lib/"
+    ],
   "output": "build",
   "targets": {
     "sql_c3": {
