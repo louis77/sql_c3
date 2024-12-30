@@ -1,4 +1,4 @@
-module pg;
+module pq;
 
 import std::io;
 import sql;
@@ -34,9 +34,9 @@ fn void register_driver() @init @private {
 
 fn sql::Connection! Postgres.open(Postgres* self, String connection_string) @dynamic
 {
-    PGconn conn = pq_connectdb((ZString)connection_string);
-    ConnStatusType dbstatus = pq_status(conn);
-    if (dbstatus != CONNECTION_OK)
+    PGconn conn = connectdb((ZString)connection_string);
+    ConnStatusType dbstatus = status(conn);
+    if (dbstatus != OK)
     {
         return sql::Error.CONNECTION_FAILURE?;
     }
@@ -52,9 +52,9 @@ fn sql::Connection! Postgres.open(Postgres* self, String connection_string) @dyn
 
 fn void! PostgresConnection.ping(PostgresConnection* self) @dynamic
 {
-    PGconn tmp_conn = pq_connectdb((ZString)self.connection_string);
-    ConnStatusType dbstatus = pq_status(tmp_conn);
-    if (dbstatus != CONNECTION_OK)
+    PGconn tmp_conn = connectdb((ZString)self.connection_string);
+    ConnStatusType dbstatus = status(tmp_conn);
+    if (dbstatus != OK)
     {
         return sql::Error.CONNECTION_FAILURE?;
     }
@@ -62,7 +62,7 @@ fn void! PostgresConnection.ping(PostgresConnection* self) @dynamic
 
 fn void PostgresConnection.close(PostgresConnection* self) @dynamic
 {
-    pq_finish(self.conn);
+    finish(self.conn);
     free(self.connection_string);
     free(self);
 }
@@ -83,18 +83,18 @@ fn PGresult! bind_parameters_and_exec(PostgresConnection* self, String command, 
         DString out = dstring::new(allocator:allocator::temp());
         bytes_printed = out.appendf("%s", val)!;
 
-        paramTypes[idx] = pg::Oid.CSTRINGOID.oid;
+        paramTypes[idx] = pq::Oid.CSTRINGOID.oid;
         paramValues[idx] = out.zstr_view();
         paramLengths[idx] = (int)out.len();
         paramFormats[idx] = 0;
     }
 
-    PGresult res = pq_exec_params(self.conn, (ZString)command, args.len,
+    PGresult res = exec_params(self.conn, (ZString)command, args.len,
         paramTypes, paramValues, paramLengths, paramFormats, 0); // 0 = TEXT
 
-    pg::ExecStatusType status = pq_result_status(res);
-    if ((status != PGRES_TUPLES_OK) && (status != PGRES_COMMAND_OK)) {
-        self._last_error = pq_result_error_message(res).str_view();
+    pq::ExecStatusType status = result_status(res);
+    if ((status != TUPLES_OK) && (status != COMMAND_OK)) {
+        self._last_error = result_error_message(res).str_view();
         return sql::Error.COMMAND_FAILED?;
     }
 
@@ -107,7 +107,7 @@ fn sql::Result! PostgresConnection.query(PostgresConnection* self, String comman
     PGresult result = bind_parameters_and_exec(self, command, ...args)!;
 
     PostgresResult* res = mem::new(PostgresResult);
-    res.row_count = pq_ntuples(result);
+    res.row_count = ntuples(result);
     res.current_row = -1;
     res.result = result;
 
@@ -118,7 +118,7 @@ fn usz! PostgresConnection.exec(PostgresConnection* self, String command, args..
 {
     PGresult result = bind_parameters_and_exec(self, command, ...args)!;
 
-    ZString affected_rows_str = pq_cmd_tuples(result);
+    ZString affected_rows_str = cmd_tuples(result);
     usz! affected_rows = (usz)affected_rows_str.str_view().to_ulong();
     if (catch excuse = affected_rows) {
         if (excuse == NumberConversion.EMPTY_STRING) return 0;
@@ -138,11 +138,11 @@ fn void! PostgresConnection.tx_begin(PostgresConnection* self) @dynamic
         return sql::Error.TX_ALREADY_IN_PROGRESS?;
     }
 
-    PGresult res = pq_exec(self.conn, "BEGIN");
+    PGresult res = exec(self.conn, "BEGIN");
 
-    pg::ExecStatusType status = pq_result_status(res);
-    if (status != PGRES_COMMAND_OK) {
-        self._last_error = pq_result_error_message(res).str_view();
+    pq::ExecStatusType status = result_status(res);
+    if (status != COMMAND_OK) {
+        self._last_error = result_error_message(res).str_view();
         return sql::Error.COMMAND_FAILED?;
     }
 
@@ -151,11 +151,11 @@ fn void! PostgresConnection.tx_begin(PostgresConnection* self) @dynamic
 
 fn void! PostgresConnection.tx_commit(PostgresConnection* self) @dynamic
 {
-    PGresult res = pq_exec(self.conn, "COMMIT");
+    PGresult res = exec(self.conn, "COMMIT");
 
-    pg::ExecStatusType status = pq_result_status(res);
-    if (status != PGRES_COMMAND_OK) {
-        self._last_error = pq_result_error_message(res).str_view();
+    pq::ExecStatusType status = result_status(res);
+    if (status != COMMAND_OK) {
+        self._last_error = result_error_message(res).str_view();
         return sql::Error.COMMAND_FAILED?;
     }
 
@@ -164,16 +164,16 @@ fn void! PostgresConnection.tx_commit(PostgresConnection* self) @dynamic
 
 fn void! PostgresConnection.tx_rollback(PostgresConnection* self) @dynamic
 {
-    PGresult res = pq_exec(self.conn, "ROLLBACK");
+    PGresult res = exec(self.conn, "ROLLBACK");
 
-    pg::ExecStatusType status = pq_result_status(res);
-    if (status != PGRES_COMMAND_OK) {
-        self._last_error = pq_result_error_message(res).str_view();
+    pq::ExecStatusType status = result_status(res);
+    if (status != COMMAND_OK) {
+        self._last_error = result_error_message(res).str_view();
         return sql::Error.COMMAND_FAILED?;
     }
 
     self._tx_in_progress = false;
-    
+
 }
 
 fn bool PostgresConnection.tx_in_progress(PostgresConnection* self) @dynamic
@@ -203,8 +203,8 @@ macro @set_null_value(dest, #value, was_null) @private
 
 fn void! PostgresResult.scan(PostgresResult* self, int fieldnum, any dest) @dynamic
 {
-    ZString tmp_value = pq_getvalue(self.result, self.current_row, fieldnum);
-    bool was_null = pq_getisnull(self.result, self.current_row, fieldnum);
+    ZString tmp_value = getvalue(self.result, self.current_row, fieldnum);
+    bool was_null = getisnull(self.result, self.current_row, fieldnum);
     if (was_null) {
         tmp_value = "";
     }
@@ -221,7 +221,7 @@ fn void! PostgresResult.scan(PostgresResult* self, int fieldnum, any dest) @dyna
 
 fn void PostgresResult.close(PostgresResult* self) @dynamic
 {
-    pq_clear(self.result);
+    clear(self.result);
     mem::free(self);
     return;
 }

@@ -1,7 +1,8 @@
 module sqlite_tests;
 
+import sqlite3;
 
-fn String status_string(CInt code) {
+fn String status_string(ResultStatus code) {
     switch (code) {
         case 0: return "SQLITE_OK";
         case 1: return "SQLITE_ERROR";

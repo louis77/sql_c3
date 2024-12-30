@@ -7,9 +7,9 @@
     "lib"
   ],
   "dependencies": [
-    "pg",
+    "pq",
     "mysql8",
-    "sqlite"
+    "sqlite3"
   ],
   "authors": [
     "Louis Brauer <louis@brauer.family>"

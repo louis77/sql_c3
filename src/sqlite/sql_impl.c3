@@ -1,4 +1,4 @@
-module sqlite;
+module sqlite3;
 
 import std::io;
 import sql;
@@ -36,8 +36,8 @@ fn sql::Connection! SqliteDriver.open(SqliteDriver* self, String connection_stri
     ZString connstr = connection_string.zstr_copy();
     defer mem::free(connstr);
 
-    CInt ret = sqlite3_open(connstr, &handle);
-    if (ret != SQLITE_OK) {
+    ResultStatus ret = open(connstr, &handle);
+    if (ret != OK) {
         return sql::Error.CONNECTION_FAILURE?;
     }
 
@@ -59,26 +59,26 @@ fn void! SqliteConnection.ping(SqliteConnection* self) @dynamic
 
 fn void SqliteConnection.close(SqliteConnection* self) @dynamic
 {
-    sqlite3_close(self.conn);
+    close(self.conn);
     free(self);
 }
 
 fn void! bind_parameters(SqliteConnection* self, SqliteStmt stmt, args...) @private
 {
-    CInt ret;
+    ResultStatus ret;
     foreach (idx, val : args) {
         if (val == null) {
-            ret = sqlite::sqlite3_bind_null(stmt, (CInt)idx+1);
+            ret = bind_null(stmt, (CInt)idx+1);
         } else {
             usz bytes_printed;
             DString out = dstring::new(allocator:allocator::temp());
             bytes_printed = out.appendf("%s", val)!;
 
-            ret = sqlite::sqlite3_bind_text(stmt, (CInt)idx+1, out.zstr_view(), (int)out.len(), null);
+            ret = bind_text(stmt, (CInt)idx+1, out.zstr_view(), (int)out.len(), null);
         }
 
-        if (ret != SQLITE_OK) {
-            self._last_error =  sqlite3_errmsg(self.conn);
+        if (ret != OK) {
+            self._last_error =  errmsg(self.conn);
             return sql::Error.COMMAND_FAILED?;
         }
     }
@@ -88,13 +88,13 @@ fn sql::Result! SqliteConnection.query(SqliteConnection* self, String command, a
 {
     // TODO: https://www.sqlite.org/c3ref/bind_blob.html
     SqliteStmt stmt;
-    CInt ret;
+    ResultStatus ret;
 
     ZString cmd = command.zstr_copy();
     defer free(cmd);
-    ret = sqlite3_prepare_v2(self.conn, cmd, -1, &stmt, null);
-    if (ret != SQLITE_OK) {
-        self._last_error =  sqlite3_errmsg(self.conn);
+    ret = prepare_v2(self.conn, cmd, -1, &stmt, null);
+    if (ret != OK) {
+        self._last_error =  errmsg(self.conn);
         return sql::Error.COMMAND_FAILED?;
     }
 
@@ -103,8 +103,7 @@ fn sql::Result! SqliteConnection.query(SqliteConnection* self, String command, a
     SqliteResult* res = mem::new(SqliteResult);
     res.stmt = stmt;
 
-    CInt column_count = sqlite3_column_count(stmt);
-    res.column_count = (usz)column_count;
+    res.column_count = (usz)column_count(stmt);
     return res;
 }
 
@@ -113,21 +112,21 @@ fn usz! SqliteConnection.exec(SqliteConnection* self, String command, args...) @
     ZString cmd = command.zstr_copy();
     defer free(cmd);
     SqliteStmt stmt;
-    CInt ret = sqlite3_prepare_v2(self.conn, cmd, -1, &stmt, null);
-    if (ret != SQLITE_OK) {
-        self._last_error =  sqlite3_errmsg(self.conn);
+    ResultStatus ret = prepare_v2(self.conn, cmd, -1, &stmt, null);
+    if (ret != OK) {
+        self._last_error =  errmsg(self.conn);
         return sql::Error.COMMAND_FAILED?;
     }
 
     bind_parameters(self, stmt, ...args)!;
 
-    ret = sqlite3_step(stmt);
-    if (ret != SQLITE_DONE) {
-        self._last_error =  sqlite3_errmsg(self.conn);
+    ret = step(stmt);
+    if (ret != DONE) {
+        self._last_error =  errmsg(self.conn);
         return sql::Error.COMMAND_FAILED?;
     }
 
-    CLong affected_rows = sqlite3_changes64(self.conn);
+    CLong affected_rows = changes64(self.conn);
     return (usz)affected_rows;
 }
 
@@ -142,9 +141,9 @@ fn void! SqliteConnection.tx_begin(SqliteConnection* self) @dynamic
         return sql::Error.TX_ALREADY_IN_PROGRESS?;
     }
 
-    CInt ret = sqlite3_exec(self.conn, "BEGIN", null, null, &self._last_error);
-    if (ret != SQLITE_OK) {
-        self._last_error =  sqlite3_errmsg(self.conn);
+    ResultStatus ret = exec(self.conn, "BEGIN", null, null, &self._last_error);
+    if (ret != OK) {
+        self._last_error =  errmsg(self.conn);
         return sql::Error.COMMAND_FAILED?;
     }
     self._tx_in_progress = true;
@@ -152,9 +151,9 @@ fn void! SqliteConnection.tx_begin(SqliteConnection* self) @dynamic
 
 fn void! SqliteConnection.tx_commit(SqliteConnection* self) @dynamic
 {
-    CInt ret = sqlite3_exec(self.conn, "COMMIT", null, null, &self._last_error);
-    if (ret != SQLITE_OK) {
-        self._last_error =  sqlite3_errmsg(self.conn);
+    ResultStatus ret = exec(self.conn, "COMMIT", null, null, &self._last_error);
+    if (ret != OK) {
+        self._last_error =  errmsg(self.conn);
         return sql::Error.COMMAND_FAILED?;
     }
     self._tx_in_progress = false;
@@ -162,9 +161,9 @@ fn void! SqliteConnection.tx_commit(SqliteConnection* self) @dynamic
 
 fn void! SqliteConnection.tx_rollback(SqliteConnection* self) @dynamic
 {
-    CInt ret = sqlite3_exec(self.conn, "ROLLBACK", null, null, &self._last_error);
-    if (ret != SQLITE_OK) {
-        self._last_error =  sqlite3_errmsg(self.conn);
+    ResultStatus ret = exec(self.conn, "ROLLBACK", null, null, &self._last_error);
+    if (ret != OK) {
+        self._last_error =  errmsg(self.conn);
         return sql::Error.COMMAND_FAILED?;
     }
     self._tx_in_progress = false;
@@ -179,10 +178,10 @@ fn bool SqliteConnection.tx_in_progress(SqliteConnection* self) @dynamic
 
 fn bool SqliteResult.next(SqliteResult* self) @dynamic
 {
-    CInt ret = sqlite3_step(self.stmt);
-    if (ret == SQLITE_DONE) return false;
+    ResultStatus ret = step(self.stmt);
+    if (ret == DONE) return false;
 
-    if (ret != SQLITE_ROW) return false; // TODO This is an error!
+    if (ret != ROW) return false; // TODO This is an error!
     return true;
 }
 
@@ -201,10 +200,10 @@ fn void! SqliteResult.scan(SqliteResult* self, int fieldnum, any dest) @dynamic
         return sql::Error.ILLEGAL_COLUMN_ACCESS?;
     }
 
-    CInt column_type = sqlite3_column_type(self.stmt, fieldnum);
-    ZString tmp_value = sqlite3_column_text(self.stmt, fieldnum);
+    ColumnType col_type = column_type(self.stmt, fieldnum);
+    ZString tmp_value = column_text(self.stmt, fieldnum);
 
-    bool was_null = (column_type == SQLITE_NULL);
+    bool was_null = (col_type == NULL);
     if (was_null) {
         tmp_value = "";
     }
@@ -218,7 +217,7 @@ fn void! SqliteResult.scan(SqliteResult* self, int fieldnum, any dest) @dynamic
 
 fn void SqliteResult.close(SqliteResult* self) @dynamic
 {
-    sqlite3_finalize(self.stmt);
+    finalize(self.stmt);
     mem::free(self);
     return;
 }

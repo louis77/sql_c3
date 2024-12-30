@@ -1,4 +1,4 @@
-module pg;
+module pq;
 
 /*
  *
@@ -12,54 +12,54 @@ def PGresult = void*;
 
 enum ConnStatusType : CInt
 {
-	CONNECTION_OK,
-	CONNECTION_BAD,
+	OK,
+	BAD,
 	/* Non-blocking mode only below here */
 
 	/*
 	 * The existence of these should never be relied upon - they should only
 	 * be used for user feedback or similar purposes.
 	 */
-	CONNECTION_STARTED,			/* Waiting for connection to be made.  */
-	CONNECTION_MADE,			/* Connection OK; waiting to send.     */
-	CONNECTION_AWAITING_RESPONSE,	/* Waiting for a response from the
+	STARTED,			/* Waiting for connection to be made.  */
+	MADE,			/* Connection OK; waiting to send.     */
+	AWAITING_RESPONSE,	/* Waiting for a response from the
 									 * postmaster.        */
-	CONNECTION_AUTH_OK,			/* Received authentication; waiting for
+	AUTH_OK,			/* Received authentication; waiting for
 								 * backend startup. */
-	CONNECTION_SETENV,			/* This state is no longer used. */
-	CONNECTION_SSL_STARTUP,		/* Performing SSL handshake. */
-	CONNECTION_NEEDED,			/* Internal state: connect() needed. */
-	CONNECTION_CHECK_WRITABLE,	/* Checking if session is read-write. */
-	CONNECTION_CONSUME,			/* Consuming any extra messages. */
-	CONNECTION_GSS_STARTUP,		/* Negotiating GSSAPI. */
-	CONNECTION_CHECK_TARGET,	/* Internal state: checking target server
+	SETENV,			/* This state is no longer used. */
+	SSL_STARTUP,		/* Performing SSL handshake. */
+	NEEDED,			/* Internal state: connect() needed. */
+	CHECK_WRITABLE,	/* Checking if session is read-write. */
+	CONSUME,			/* Consuming any extra messages. */
+	GSS_STARTUP,		/* Negotiating GSSAPI. */
+	CHECK_TARGET,	/* Internal state: checking target server
 								 * properties. */
-	CONNECTION_CHECK_STANDBY,	/* Checking if server is in standby mode. */
-	CONNECTION_ALLOCATED,		/* Waiting for connection attempt to be
+	CHECK_STANDBY,	/* Checking if server is in standby mode. */
+	ALLOCATED,		/* Waiting for connection attempt to be
 								 * started.  */
 }
 
 enum ExecStatusType : CInt
 {
-	PGRES_EMPTY_QUERY,	 		/* empty query string was executed */
-	PGRES_COMMAND_OK,			/* a query command that doesn't return
+	EMPTY_QUERY,	 		/* empty query string was executed */
+	COMMAND_OK,			/* a query command that doesn't return
 								 * anything was executed properly by the
 								 * backend */
-	PGRES_TUPLES_OK,			/* a query command that returns tuples was
+	TUPLES_OK,			/* a query command that returns tuples was
 								 * executed properly by the backend, PGresult
 								 * contains the result tuples */
-	PGRES_COPY_OUT,				/* Copy Out data transfer in progress */
-	PGRES_COPY_IN,				/* Copy In data transfer in progress */
-	PGRES_BAD_RESPONSE,			/* an unexpected response was recv'd from the
+	COPY_OUT,				/* Copy Out data transfer in progress */
+	COPY_IN,				/* Copy In data transfer in progress */
+	BAD_RESPONSE,			/* an unexpected response was recv'd from the
 								 * backend */
-	PGRES_NONFATAL_ERROR,		/* notice or warning message */
-	PGRES_FATAL_ERROR,			/* query failed */
-	PGRES_COPY_BOTH,			/* Copy In/Out data transfer in progress */
-	PGRES_SINGLE_TUPLE,			/* single tuple from larger resultset */
-	PGRES_PIPELINE_SYNC,		/* pipeline synchronization point */
-	PGRES_PIPELINE_ABORTED,		/* Command didn't run because of an abort
+	NONFATAL_ERROR,		/* notice or warning message */
+	FATAL_ERROR,			/* query failed */
+	COPY_BOTH,			/* Copy In/Out data transfer in progress */
+	SINGLE_TUPLE,			/* single tuple from larger resultset */
+	PIPELINE_SYNC,		/* pipeline synchronization point */
+	PIPELINE_ABORTED,		/* Command didn't run because of an abort
 								 * earlier in a pipeline */
-	PGRES_TUPLES_CHUNK			/* chunk of tuples from larger resultset */
+	TUPLES_CHUNK			/* chunk of tuples from larger resultset */
 }
 
 enum ColumnFormatCode : CInt
@@ -264,49 +264,49 @@ enum Oid : int (int oid) {
 
 // Connection Control Functions
 
-extern fn PGconn pq_connectdb(ZString conninfo) @extern("PQconnectdb");
-extern fn void pq_finish(PGconn conn) @extern("PQfinish");
+extern fn PGconn connectdb(ZString conninfo) @extern("PQconnectdb");
+extern fn void finish(PGconn conn) @extern("PQfinish");
 
 // Connection Status Functions
 
-extern fn ZString pq_db(PGconn conn) @extern("PQdb");
-extern fn ZString pq_user(PGconn conn) @extern("PQuser");
-extern fn ZString pq_pass(PGconn conn) @extern("PQpass");
-extern fn ZString pq_host(PGconn conn) @extern("PQhost");
-extern fn ZString pq_hostaddr(PGconn conn) @extern("PQhostaddr");
-extern fn ZString pq_port(PGconn conn) @extern("PQport");
-extern fn ZString pq_tty(PGconn conn) @extern("PQtty") @deprecated;
-extern fn ZString pq_options(PGconn conn) @extern("PQoptions");
-extern fn ConnStatusType pq_status(PGconn conn) @extern("PQstatus");
+extern fn ZString db(PGconn conn) @extern("PQdb");
+extern fn ZString user(PGconn conn) @extern("PQuser");
+extern fn ZString pass(PGconn conn) @extern("PQpass");
+extern fn ZString host(PGconn conn) @extern("PQhost");
+extern fn ZString hostaddr(PGconn conn) @extern("PQhostaddr");
+extern fn ZString port(PGconn conn) @extern("PQport");
+extern fn ZString tty(PGconn conn) @extern("PQtty") @deprecated;
+extern fn ZString options(PGconn conn) @extern("PQoptions");
+extern fn ConnStatusType status(PGconn conn) @extern("PQstatus");
 // TODO
-extern fn CInt pq_server_version(PGconn conn) @extern("PQserverVersion");
-extern fn ZString pq_error_message(PGconn conn) @extern("PQerrorMessage");
+extern fn CInt server_version(PGconn conn) @extern("PQserverVersion");
+extern fn ZString error_message(PGconn conn) @extern("PQerrorMessage");
 // TODO
 
 // Command Execution Functions
 
-extern fn PGresult pq_exec(PGconn conn, ZString command) @extern("PQexec");
-extern fn ExecStatusType pq_result_status(PGresult res) @extern("PQresultStatus");
-extern fn void pq_clear(PGresult res) @extern("PQclear");
-extern fn CInt pq_ntuples(PGresult res) @extern("PQntuples");
-extern fn CInt pq_nfields(PGresult res) @extern("PQnfields");
-extern fn ZString pq_fname(PGresult res, CInt column_number) @extern("PQfname");
-extern fn CInt pq_fnumber(PGresult res, ZString column_name) @extern("PQfnumber");
-extern fn ColumnFormatCode pq_fformat(PGresult res, CInt column_number) @extern("PQfformat");
-extern fn CInt pq_ftype(PGresult res, CInt column_number) @extern("PQftype");
-extern fn ZString pq_getvalue(PGresult res, CInt row_number, CInt column_number) @extern("PQgetvalue");
-extern fn bool pq_getisnull(PGresult res, CInt row_number, CInt column_number) @extern("PQgetisnull");
-extern fn ZString pq_cmd_status(PGresult res) @extern("PQcmdStatus");
-extern fn ZString pq_cmd_tuples(PGresult res) @extern("PQcmdTuples");
-extern fn ZString pq_result_error_message(PGresult res) @extern("PQresultErrorMessage");
-extern fn PGresult pq_exec_params(PGconn conn,
+extern fn PGresult exec(PGconn conn, ZString command) @extern("PQexec");
+extern fn ExecStatusType result_status(PGresult res) @extern("PQresultStatus");
+extern fn void clear(PGresult res) @extern("PQclear");
+extern fn CInt ntuples(PGresult res) @extern("PQntuples");
+extern fn CInt nfields(PGresult res) @extern("PQnfields");
+extern fn ZString fname(PGresult res, CInt column_number) @extern("PQfname");
+extern fn CInt fnumber(PGresult res, ZString column_name) @extern("PQfnumber");
+extern fn ColumnFormatCode fformat(PGresult res, CInt column_number) @extern("PQfformat");
+extern fn CInt ftype(PGresult res, CInt column_number) @extern("PQftype");
+extern fn ZString getvalue(PGresult res, CInt row_number, CInt column_number) @extern("PQgetvalue");
+extern fn bool getisnull(PGresult res, CInt row_number, CInt column_number) @extern("PQgetisnull");
+extern fn ZString cmd_status(PGresult res) @extern("PQcmdStatus");
+extern fn ZString cmd_tuples(PGresult res) @extern("PQcmdTuples");
+extern fn ZString result_error_message(PGresult res) @extern("PQresultErrorMessage");
+extern fn PGresult exec_params(PGconn conn,
                        ZString command,
                        CInt nParams,
                        CInt* paramTypes,
                        ZString* paramValues,
                        CInt* paramLengths,
-                       CInt *paramFormats,
+                       CInt* paramFormats,
                        CInt resultFormat) @extern("PQexecParams");
 // Miscellaneous Functions
 
-extern fn CInt pq_lib_version() @extern("PQlibVersion");
+extern fn CInt lib_version() @extern("PQlibVersion");

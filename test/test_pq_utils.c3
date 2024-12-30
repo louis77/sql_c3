@@ -1,8 +1,8 @@
 module pg_tests;
 
-import pg;
+import pq;
 
-fn pg::Oid oid_from_int(int oid) {
+fn pq::Oid oid_from_int(int oid) {
 	Oid o;
 	switch (oid)
 	{
