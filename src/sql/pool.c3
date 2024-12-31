@@ -26,6 +26,7 @@ fn int manager_work(void* args) @private
     Pool* pool = (Pool*)args;
     while (!pool.should_close)
     {
+        thread::sleep_ms(100);
         pool.mu.lock()!!;
 
         List(<Connection>) expired_connections;
@@ -48,7 +49,6 @@ fn int manager_work(void* args) @private
         }
 
         pool.mu.unlock()!!;
-        thread::sleep_ms(100);
     }
 
     return 0;
@@ -77,6 +77,7 @@ fn void! Pool.free(&self)
     self.should_close = true;
     // Wait for the manager to stop
     self.manager.join()!;
+    self.manager.destroy();
 
     self.mu.lock()!;
     self.close_all();
@@ -141,6 +142,7 @@ fn void Pool.close_all(&self) @private
 
     foreach (idx, &conn : self.conns_unused)
     {
+        io::printn("CLOSED UNUSED");
         conn.first.close();
     }
     self.conns_unused.clear();

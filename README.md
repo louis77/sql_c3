@@ -31,7 +31,7 @@ Make sure to change the linker paths in `project.json` to point to your `libpq`,
 - [X] PostgreSQL (driver_id: `postgres`) (must install `libpq`)
 - [X] MySQL 8+ (driver_id: `mysql`) (must install `mysql-client`)
 - [X] SQLite 3+  (driver_id: `sqlite`) (must install `sqlite3`)
-s
+
 ## Usage
 
 This package contains the following modules:
@@ -78,7 +78,7 @@ See the [test](test) folder for further examples of how to use the `sql` module.
 
 ## Connection Pool
 
-There is a simple implementation of a connection pool available. A pool starts a seperate thread that handles the expiration of unused connections.
+There is a simple implementation of a connection pool available. A pool starts a seperate thread that handles the expiration of unused connections. So your platform must either support POSIX threads or Windows.
 
 Usage:
 

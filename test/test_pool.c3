@@ -7,7 +7,6 @@ import sql;
 
 fn void! test_create_pool()
 {
-mem::@report_heap_allocs_in_scope() {
     Pool* pool = sql::create_pool("postgres", "postgres://postgres@localhost/postgres", 1, 1000 * time::MS)!;
 
     assert(pool != null, "Pool was null");
@@ -28,7 +27,6 @@ mem::@report_heap_allocs_in_scope() {
     assert(pool.conns_unused.len() == 1, "After close, there should be 1 available connections");
 
     pool.free()!;
-};
 }
 
 
@@ -69,7 +67,6 @@ mem::@report_heap_allocs_in_scope() {
 
 fn void! test_pool_thread()
 {
-mem::@report_heap_allocs_in_scope() {
     Pool* pool = sql::create_pool("postgres", "postgres://postgres@localhost/postgres", 1, 1000 * time::MS)!;
 
     Connection conn = pool.acquire()!;
@@ -90,5 +87,4 @@ mem::@report_heap_allocs_in_scope() {
     assert(pool.conns_unused.len() == 0, "There should be no available connections");
 
     pool.free()!;
-};
 }
