@@ -10,17 +10,17 @@ fn void! test_all()
 {
 mem::@report_heap_allocs_in_scope() {
 	CInt libversion = pq::lib_version();
-    assert(libversion > 0, "Lib version should be greater than 0");
+	assert(libversion > 0, "Lib version should be greater than 0");
 
 	PGconn conn = pq::connectdb(connection_string);
 
-    // At this point, the connection is not established yet
+	// At this point, the connection is not established yet
 
 	ConnStatusType dbstatus = pq::status(conn);
-    assert(dbstatus == OK);
+	assert(dbstatus == OK);
 
 	ZString dbname = pq::db(conn);
-    assert(ZString.str_view(dbname) == "postgres");
+	assert(ZString.str_view(dbname) == "postgres");
 
 	ZString dbuser = pq::user(conn);
 	assert(ZString.str_view(dbuser) == "postgres");
@@ -80,7 +80,7 @@ mem::@report_heap_allocs_in_scope()
 {
 	PGconn conn = pq::connectdb(connection_string);
 	ConnStatusType dbstatus = pq::status(conn);
-    assert(dbstatus == OK);
+	assert(dbstatus == OK);
 
 	PGresult result = pq::exec(conn, "CREATE TEMPORARY TABLE test (col INT)");
 	ZString cmd_status = pq::cmd_status(result);
