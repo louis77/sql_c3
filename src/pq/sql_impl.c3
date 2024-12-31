@@ -1,4 +1,4 @@
-module pq;
+module pq @if($defined(status));
 
 import std::io;
 import sql;
@@ -83,7 +83,7 @@ fn PGresult! bind_parameters_and_exec(PostgresConnection* self, String command, 
         DString out = dstring::new(allocator:allocator::temp());
         bytes_printed = out.appendf("%s", val)!;
 
-        paramTypes[idx] = pq::Oid.CSTRINGOID.oid;
+        paramTypes[idx] = Oid.CSTRINGOID.oid;
         paramValues[idx] = out.zstr_view();
         paramLengths[idx] = (int)out.len();
         paramFormats[idx] = 0;
@@ -92,7 +92,7 @@ fn PGresult! bind_parameters_and_exec(PostgresConnection* self, String command, 
     PGresult res = exec_params(self.conn, (ZString)command, args.len,
         paramTypes, paramValues, paramLengths, paramFormats, 0); // 0 = TEXT
 
-    pq::ExecStatusType status = result_status(res);
+    ExecStatusType status = result_status(res);
     if ((status != TUPLES_OK) && (status != COMMAND_OK)) {
         self._last_error = result_error_message(res).str_view();
         return sql::Error.COMMAND_FAILED?;
@@ -140,7 +140,7 @@ fn void! PostgresConnection.tx_begin(PostgresConnection* self) @dynamic
 
     PGresult res = exec(self.conn, "BEGIN");
 
-    pq::ExecStatusType status = result_status(res);
+    ExecStatusType status = result_status(res);
     if (status != COMMAND_OK) {
         self._last_error = result_error_message(res).str_view();
         return sql::Error.COMMAND_FAILED?;
@@ -153,7 +153,7 @@ fn void! PostgresConnection.tx_commit(PostgresConnection* self) @dynamic
 {
     PGresult res = exec(self.conn, "COMMIT");
 
-    pq::ExecStatusType status = result_status(res);
+    ExecStatusType status = result_status(res);
     if (status != COMMAND_OK) {
         self._last_error = result_error_message(res).str_view();
         return sql::Error.COMMAND_FAILED?;
@@ -166,7 +166,7 @@ fn void! PostgresConnection.tx_rollback(PostgresConnection* self) @dynamic
 {
     PGresult res = exec(self.conn, "ROLLBACK");
 
-    pq::ExecStatusType status = result_status(res);
+    ExecStatusType status = result_status(res);
     if (status != COMMAND_OK) {
         self._last_error = result_error_message(res).str_view();
         return sql::Error.COMMAND_FAILED?;

@@ -1,4 +1,4 @@
-module mysql8 @test;
+module mysqltest @test;
 
 import std::io;
 

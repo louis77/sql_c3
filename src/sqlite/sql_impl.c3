@@ -1,4 +1,4 @@
-module sqlite3;
+module sqlite3 @if($defined(sqlite3));
 
 import std::io;
 import sql;
@@ -153,7 +153,7 @@ fn void! SqliteConnection.tx_commit(SqliteConnection* self) @dynamic
 {
     ResultStatus ret = exec(self.conn, "COMMIT", null, null, &self._last_error);
     if (ret != OK) {
-        self._last_error =  errmsg(self.conn);
+        self._last_error = errmsg(self.conn);
         return sql::Error.COMMAND_FAILED?;
     }
     self._tx_in_progress = false;

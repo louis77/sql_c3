@@ -1,10 +1,11 @@
-module mysql8;
+module mysql8 @if($defined(ping));
 
 import std::io;
 import std::collections::list;
 import libc;
-import url;
+import std::net::url;
 import sql;
+// import mysql8;
 
 struct MysqlDriver (sql::Driver) {
     int _x;
@@ -128,7 +129,6 @@ fn sql::Result! MysqlConnection.query(MysqlConnection* self, String command, arg
     ret = stmt_execute(stmt);
     if (ret != 0) {
         self._last_error = error(self.conn).str_view();
-        io::eprintn(self._last_error);
         return sql::Error.COMMAND_FAILED?;
     }
 
@@ -178,7 +178,6 @@ fn usz! MysqlConnection.exec(MysqlConnection* self, String command, args...) @dy
     ret = stmt_execute(stmt);
     if (ret != 0) {
         self._last_error = error(self.conn).str_view();
-        io::eprintn(self._last_error);
         return sql::Error.COMMAND_FAILED?;
     }
 
