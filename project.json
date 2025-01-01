@@ -5,7 +5,11 @@
   "dependencies":  [ "pq", "mysql8", "sqlite3" ],
   "authors":  [ "Louis Brauer <louis@brauer.family>" ],
   "version": "0.2.0",
-  "sources":  [ "src/**", "test/**" ],
+  "sources":  [
+    "src/**",
+    "test/**",
+    "vendor/**",
+  ],
   "linked-libraries":  [  ],
   "linker-search-paths":  [
       "/opt/homebrew/Cellar/libpq/17.2/lib/",

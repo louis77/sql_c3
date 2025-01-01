@@ -1,4 +1,4 @@
-module sqlite3 @if($defined(sqlite3));
+module sqlite3 @if($defined(open));
 
 import std::io;
 import sql;
