@@ -135,18 +135,11 @@ fn sql::Result! MysqlConnection.query(MysqlConnection* self, String command, arg
 	result.stmt = stmt;
 	result.num_fields = stmt_field_count(stmt);
 
-	CULong real_length = 0;
-
 	// Bind to empty buffer. This is stupidly necessary to tell MySQL that we will
 	// later fetch columns individually via fetch_column()
 
 	MysqlBind* empty_bind = calloc(MysqlBind.sizeof * result.num_fields);
 	defer free(empty_bind);
-	for (int idx = 0; idx < result.num_fields; idx++) {
-		empty_bind[idx].buffer = (void *)0;
-		empty_bind[idx].buffer_length = 0;
-		empty_bind[idx].length = &real_length;
-	}
 
 	bool bind_ret = stmt_bind_result(stmt, empty_bind);
 	if ((int)bind_ret != 0) {
@@ -247,8 +240,6 @@ fn bool MysqlResult.next(MysqlResult* self) @dynamic
 
 	return true;
 }
-
-
 
 fn void! MysqlResult.scan(MysqlResult* self, int fieldnum, any dest) @dynamic
 {
