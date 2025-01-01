@@ -77,7 +77,6 @@ fn void! Pool.free(&self)
 	self.should_close = true;
 	// Wait for the manager to stop
 	self.manager.join()!;
-	self.manager.destroy();
 
 	self.mu.lock()!;
 	self.close_all();
