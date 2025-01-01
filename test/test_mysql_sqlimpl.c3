@@ -6,7 +6,7 @@ import sql;
 String connection_string = "mysql://root@localhost:3306/test";
 
 fn void! test_mysql_success() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("mysql", connection_string)!;
 	defer try conn.close();
@@ -61,7 +61,7 @@ mem::@report_heap_allocs_in_scope(false)
 
 fn void! test_mysql_fail()
 {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	String connection_string = "mysql://WHUUT@loca lhost:3306/test";
 	sql::Connection! conn = sql::open("mysql", connection_string);
@@ -76,7 +76,7 @@ mem::@report_heap_allocs_in_scope()
 
 fn void! test_mysql_exec()
 {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("mysql", connection_string)!;
 	defer conn.close();
@@ -95,7 +95,7 @@ mem::@report_heap_allocs_in_scope()
 }
 
 fn void! test_mysql_malformed_query() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("mysql", connection_string)!;
 	defer conn.close();
@@ -115,7 +115,7 @@ mem::@report_heap_allocs_in_scope()
 }
 
 fn void! test_mysql_parameterized_query() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("mysql", connection_string)!;
 	defer try conn.close();
@@ -139,7 +139,7 @@ mem::@report_heap_allocs_in_scope()
 }
 
 fn void! test_mysql_transaction_success() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("mysql", connection_string)!;
 	defer try conn.close();
@@ -180,7 +180,7 @@ mem::@report_heap_allocs_in_scope()
 }
 
 fn void! test_mysql_transaction_rollback() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("mysql", connection_string)!;
 	defer try conn.close();
@@ -217,7 +217,7 @@ mem::@report_heap_allocs_in_scope()
 }
 
 fn void! test_mysql_double_transaction() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("mysql",connection_string)!;
 	defer try conn.close();

@@ -6,7 +6,7 @@ import sql;
 String connection_string = "postgres://postgres@localhost/postgres";
 
 fn void! test_pg_success() {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	sql::Connection! conn = sql::open("postgres", connection_string);
 	conn.ping()!;
 	conn.close()!;
@@ -14,7 +14,7 @@ mem::@report_heap_allocs_in_scope() {
 }
 
 fn void! test_pg_fail() {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	String connection_string = "postgres://postgres@THISISWRONG/postgres";
 	sql::Connection! conn = sql::open("postgres", connection_string);
 	if (catch error = conn.ping()) {
@@ -26,7 +26,7 @@ mem::@report_heap_allocs_in_scope() {
 }
 
 fn void! test_pg_query() {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	sql::Connection conn = sql::open("postgres", "postgres://postgres@localhost/postgres")!;
 	defer try conn.close();
 
@@ -71,7 +71,7 @@ mem::@report_heap_allocs_in_scope() {
 }
 
 fn void! test_pg_malformed_query() {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	sql::Connection conn = sql::open("postgres", "postgres://postgres@localhost/postgres")!;
 	defer try conn.close();
 
@@ -91,7 +91,7 @@ mem::@report_heap_allocs_in_scope() {
 
 
 fn void! test_pg_exec() {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	sql::Connection conn = sql::open("postgres", "postgres://postgres@localhost/postgres")!;
 	defer try conn.close();
 
@@ -114,7 +114,7 @@ mem::@report_heap_allocs_in_scope() {
 }
 
 fn void! test_pg_parameterized_query() {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	sql::Connection conn = sql::open("postgres", connection_string)!;
 	defer try conn.close();
 
@@ -142,7 +142,7 @@ mem::@report_heap_allocs_in_scope() {
 
 
 fn void! test_pg_transaction_success() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("postgres", connection_string)!;
 	defer try conn.close();
@@ -187,7 +187,7 @@ mem::@report_heap_allocs_in_scope()
 }
 
 fn void! test_pg_transaction_rollback() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("postgres", connection_string)!;
 	defer try conn.close();
@@ -227,7 +227,7 @@ mem::@report_heap_allocs_in_scope()
 }
 
 fn void! test_pg_double_transaction() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("postgres", connection_string)!;
 	defer try conn.close();

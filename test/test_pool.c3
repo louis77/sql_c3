@@ -32,7 +32,7 @@ fn void! test_create_pool()
 
 fn void! test_pool_exhaust()
 {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	usz capacity = 3;
 	Pool* pool = sql::create_pool("postgres", "postgres://postgres@localhost/postgres", capacity, 1000 * time::MS)!;
 

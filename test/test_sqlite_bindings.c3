@@ -5,7 +5,7 @@ import sqlite3;
 
 fn void! test_sqlite_open()
 {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	SqliteHandle handle;
 	ResultStatus ret = sqlite3::open("test.sqlite", &handle);
@@ -18,7 +18,7 @@ mem::@report_heap_allocs_in_scope()
 
 fn void! test_sqlite_simple_query()
 {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	SqliteHandle handle;
 	ResultStatus ret = sqlite3::open("test.sqlite", &handle);
@@ -44,7 +44,7 @@ mem::@report_heap_allocs_in_scope()
 
 fn void! test_sqlite_prepare()
 {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	SqliteHandle handle;
 	ResultStatus ret = sqlite3::open("test.sqlite", &handle);

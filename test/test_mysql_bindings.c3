@@ -4,7 +4,7 @@ import std::io;
 import mysql8;
 
 fn void! test_all() {
-std::core::mem::@report_heap_allocs_in_scope() {
+std::core::mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	mysql8::library_init(0, null, null);
 
 	Mysql mysql = mysql8::init(null);

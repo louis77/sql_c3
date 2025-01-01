@@ -7,7 +7,7 @@ String connection_string = "test.sqlite";
 
 fn void! test_sqlite_success()
 {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("sqlite", connection_string)!;
 	defer try conn.close();
@@ -18,7 +18,7 @@ mem::@report_heap_allocs_in_scope()
 
 fn void! test_sqlite_query()
 {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("sqlite", connection_string)!;
 	defer try conn.close();
@@ -63,7 +63,7 @@ mem::@report_heap_allocs_in_scope()
 }
 
 fn void! test_sqlite_fail() {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	String connection_string = "sqlite://WHUUT@loca lhost:3306/test";
 
 	sql::Connection! conn = sql::open("sqlite", connection_string);
@@ -78,7 +78,7 @@ mem::@report_heap_allocs_in_scope() {
 }
 
 fn void! test_sqlite_exec() {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	sql::Connection conn = sql::open("sqlite", connection_string)!;
 	defer try conn.close();
 
@@ -96,7 +96,7 @@ mem::@report_heap_allocs_in_scope() {
 }
 
 fn void! test_sqlite_malformed_query() {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	sql::Connection conn = sql::open("sqlite", connection_string)!;
 	defer try conn.close();
 
@@ -115,7 +115,7 @@ mem::@report_heap_allocs_in_scope() {
 }
 
 fn void! test_sqlite_parameterized_query() {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	sql::Connection conn = sql::open("sqlite", connection_string)!;
 	defer try conn.close();
 
@@ -152,7 +152,7 @@ mem::@report_heap_allocs_in_scope() {
 
 
 fn void! test_sqlite_transaction_success() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("sqlite", connection_string)!;
 	defer try conn.close();
@@ -193,7 +193,7 @@ mem::@report_heap_allocs_in_scope()
 }
 
 fn void! test_sqlite_transaction_rollback() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("sqlite", connection_string)!;
 	defer try conn.close();
@@ -230,7 +230,7 @@ mem::@report_heap_allocs_in_scope()
 }
 
 fn void! test_sqlite_double_transaction() {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	sql::Connection conn = sql::open("sqlite", connection_string)!;
 	defer try conn.close();

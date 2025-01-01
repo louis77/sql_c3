@@ -8,7 +8,7 @@ ZString connection_string = "postgres://postgres@localhost/postgres";
 
 fn void! test_all()
 {
-mem::@report_heap_allocs_in_scope() {
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK)) {
 	CInt libversion = pq::lib_version();
 	assert(libversion > 0, "Lib version should be greater than 0");
 
@@ -76,7 +76,7 @@ mem::@report_heap_allocs_in_scope() {
 
 fn void! test_cmd_tuples()
 {
-mem::@report_heap_allocs_in_scope()
+mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 {
 	PGconn conn = pq::connectdb(connection_string);
 	ConnStatusType dbstatus = pq::status(conn);

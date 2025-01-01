@@ -22,6 +22,9 @@ c3c project fetch
 
 # Run tests
 c3c test
+
+# Run tests with memory leak check
+c3c test -D MEMCHECK
 ```
 
 Make sure to change the linker paths in `project.json` to point to your `libpq`, `mysql-client` or `sqlite` installation.
