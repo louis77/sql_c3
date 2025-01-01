@@ -11,7 +11,19 @@ macro @set_null_value(dest, #value, is_null) @private
 	}
 }
 
-macro @convert_builder_value(builder, dest, is_null)
+fn void! scan_with_function(Scannable arg, ZString builder, bool is_null) @inline @private
+{
+	if (&arg.decode)
+	{
+		if (is_null) return;
+		arg.decode(builder)!;
+		return;
+	}
+
+	return Error.UNSUPPORTED_SCAN_TYPE?;
+}
+
+macro void! @convert_builder_value(builder, dest, is_null)
 {
 	switch (dest) {
 		case String:
@@ -75,6 +87,6 @@ macro @convert_builder_value(builder, dest, is_null)
 		case float*:
 			@set_null_value(dest, builder.str_view().to_float()!, is_null);
 		default:
-			return Error.UNSUPPORTED_SCAN_TYPE?;
+			scan_with_function((Scannable)dest, builder.zstr_view(), is_null)!;
 	}
 }

@@ -53,27 +53,27 @@ import sql;
 
 fn void main()
 {
-    // Open a connection
-    sql::Connection conn = sql::open("postgres", "postgres://postgres@localhost/postgres")!;
-    defer try conn.close();
+	// Open a connection
+	sql::Connection conn = sql::open("postgres", "postgres://postgres@localhost/postgres")!;
+	defer try conn.close();
 
-    // Make a simple query
-    String cmd = "SELECT * FROM (VALUES(1, 'hello', null), (2, 'world', null)) AS t(a_num, a_string, a_null)";
+	// Make a simple query
+	String cmd = "SELECT * FROM (VALUES(1, 'hello', null), (2, 'world', null)) AS t(a_num, a_string, a_null)";
 
-    Result res = conn.query(cmd)!;
-    defer res.close(); // Don't forget to close the result
+	Result res = conn.query(cmd)!;
+	defer res.close(); // Don't forget to close the result
 
-    // Call next() to move to next row. Must also be called for the first row
-    while (res.next()) {
-        int a_num;
-        String a_string;
-        int* a_null; // supports checking for NULL
+	// Call next() to move to next row. Must also be called for the first row
+	while (res.next()) {
+		int a_num;
+		String a_string;
+		int* a_null; // supports checking for NULL
 
-        // Scan each column into a variable.
-        res.scan(0, &a_num)!;
-        res.scan(1, &a_string)!;
-        res.scan(2, &a_null)!;
-    }
+		// Scan each column into a variable.
+		res.scan(0, &a_num)!;
+		res.scan(1, &a_string)!;
+		res.scan(2, &a_null)!;
+	}
 }
 ```
 
@@ -92,9 +92,9 @@ Usage:
 // time of unused connection.
 
 sql::Pool pool = sql::create_pool("postgres", "postgres://postgres@localhost/postgres",
-    16, // maximum open connections
-    1000 * time::MS // idle timeout
-    )!;
+	16, // maximum open connections
+	1000 * time::MS // idle timeout
+	)!;
 defer try pool.free();
 
 // Now you can acquire a new connection.
@@ -110,6 +110,8 @@ pool.release(conn)!;
 // until the idle timeout is reached
 ```
 
+⚠️ Due to a minor bug in C3 <= 0.6.5, pools leak a little bit of memory. This has been [fixed in C3 0.6.6+](https://github.com/c3lang/c3c/commit/5e32c8a828468892f8d9ab4fb95b595c25c6e72d).
+
 ## API
 
 The `sql` package has the following API:
@@ -122,17 +124,17 @@ fn Connection! open(String driver_id, String connection_string);
 
 interface Connection
 {
-    fn void         close();
-    fn void!        ping();
-    fn Result!      query(String command, args...);
-    fn usz!         exec(String command, args...);
-    fn String       last_error();
+	fn void         close();
+	fn void!        ping();
+	fn Result!      query(String command, args...);
+	fn usz!         exec(String command, args...);
+	fn String       last_error();
 
-    // Optionally, start, commit or rollback transactions
-    fn void!        tx_begin();
-    fn void!        tx_commit();
-    fn void!        tx_rollback();
-    fn bool         tx_in_progress();
+	// Optionally, start, commit or rollback transactions
+	fn void!        tx_begin();
+	fn void!        tx_commit();
+	fn void!        tx_rollback();
+	fn bool         tx_in_progress();
 }
 
 
@@ -148,24 +150,31 @@ fn usz          Pool.conns_available();
 
 interface Result
 {
-    fn bool         next();
-    fn void!        scan(int fieldnum, any dest);
+	fn bool         next();
+	fn void!        scan(int fieldnum, any dest);
+	fn void         close();
+}
+
+
+interface Scannable
+{
+	fn void! 	 decode(ZString raw_value);
 }
 
 
 fault Error
 {
-    CONNECTION_FAILURE,
-    NOT_IMPLEMENTED,
-    COMMAND_FAILED,
-    PARAM_BINDING_FAILED,
-    UNSUPPORTED_SCAN_TYPE,
-    UNSUPPORTED_BIND_TYPE,
-    ILLEGAL_COLUMN_ACCESS,
-    PREPARE_FAILED,
-    UNKNOWN_ERROR,
-    TX_ALREADY_IN_PROGRESS,
-    POOL_EXHAUSTED,
+	CONNECTION_FAILURE,
+	NOT_IMPLEMENTED,
+	COMMAND_FAILED,
+	PARAM_BINDING_FAILED,
+	UNSUPPORTED_SCAN_TYPE,
+	UNSUPPORTED_BIND_TYPE,
+	ILLEGAL_COLUMN_ACCESS,
+	PREPARE_FAILED,
+	UNKNOWN_ERROR,
+	TX_ALREADY_IN_PROGRESS,
+	POOL_EXHAUSTED,
 }
 ```
 
@@ -197,9 +206,32 @@ double*
 float*
 ```
 
-If you scan into a pointer type, it will be set to `null` if the result was SQL `NULL`. Otherwise `NULL` will scan into an empty value.
+Use the `Result.scan()` function to scan into any of these types. If you scan into a pointer type, it will be set to `null` if the result was SQL `NULL`. Otherwise `NULL` will scan into an empty value.
 
 Other types will currently return a `UNSUPPORTED_SCAN_TYPE` fault.
+
+### Scanning into custom types
+
+Optionally, you can use your own types as scanning destinations by implementing the `decode()` function (see the `Scannable` interface). This would make it possible to implement i.e. scanning times, arrays, json fields etc.
+
+Example:
+
+```kotlin
+struct MyScanner
+{
+	int  int_value;
+	bool valid;
+}
+
+fn void! MyScanner.decode(&self, ZString raw_value) @dynamic
+{
+	int tmp = raw_value.str_view().to_int()!;
+	self.int_value = tmp;
+	self.valid = true;
+}
+```
+
+If the raw_value was SQL `NULL`, the `decode()` function will not be called, so your type must be laid out appropriately.
 
 ## Drivers
 
@@ -209,8 +241,8 @@ A driver is expected to register itself with the `sql` module using the `sql::re
 
 ```kotlin
 fn void register_driver() @init @private {
-    Postgres* db = mem::new(Postgres);
-    sql::register_driver("postgres", db);
+	Postgres* db = mem::new(Postgres);
+	sql::register_driver("postgres", db);
 }
 ```
 
@@ -228,12 +260,13 @@ Currently supported:
 - [x] Parameterized queries
 - [x] Transactions
 - [x] Connection pooling
+- [x] Support scanning into custom type
 
 In progress:
 
 - [ ] Fix some memory leaks
+- [ ] Support binding custom types
 - [ ] Prepared statements (currently used internally, but not exposed to the user)
-- [ ] Support for Custom scannable types (SQLValue)
 - [ ] Support for DB specific types
 - [ ] Use binary encoding of params/result values
 

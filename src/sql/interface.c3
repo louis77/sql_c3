@@ -41,6 +41,11 @@ interface Result
 	fn void         close();
 }
 
+interface Scannable
+{
+	fn void! 	 decode(ZString raw_value);
+}
+
 <*
 	Common faults.
 *>
