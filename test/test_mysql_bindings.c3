@@ -1,4 +1,4 @@
-module mysqltest @test;
+module mysqltest @test @if(!$feature(NO_MYSQL));
 
 import std::io;
 import mysql8;

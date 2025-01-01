@@ -70,9 +70,7 @@ fn void main()
 		int* a_null; // supports checking for NULL
 
 		// Scan each column into a variable.
-		res.scan(0, &a_num)!;
-		res.scan(1, &a_string)!;
-		res.scan(2, &a_null)!;
+		res.scan(a_num, a_string, a_null)!;
 	}
 }
 ```
@@ -151,7 +149,7 @@ fn usz          Pool.conns_available();
 interface Result
 {
 	fn bool         next();
-	fn void!        scan(int fieldnum, any dest);
+	fn void!        scan(dests...);
 	fn void         close();
 }
 

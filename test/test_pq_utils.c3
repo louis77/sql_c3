@@ -1,4 +1,4 @@
-module pg_tests;
+module pg_tests @if(!$feature(NO_PQ));
 
 import pq;
 

@@ -1,4 +1,4 @@
-module sqlite_tests;
+module sqlite_tests @if(!$feature(NO_SQLITE));
 
 import sqlite3;
 

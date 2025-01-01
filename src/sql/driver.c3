@@ -8,14 +8,12 @@ map::HashMap(<String, Driver>) registry @private;
 fn void register_driver(String driver_id, Driver driver)
 {
 	registry.set(driver_id, driver);
-	io::printfn("Registered driver '%s'", driver_id);
 }
 
 fn void deallocate_drivers() @finalizer @private {
 	registry.@each(; String driver_id, Driver driver)
 	{
 		driver.free();
-		io::printfn("Unregistered driver '%s'", driver_id);
 	};
 }
 

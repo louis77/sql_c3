@@ -1,4 +1,4 @@
-module pg_tests @test;
+module pg_tests @test @if(!$feature(NO_PQ));
 
 import std::io;
 import pq;

@@ -37,7 +37,7 @@ interface Connection
 interface Result
 {
 	fn bool         next();
-	fn void!        scan(int fieldnum, any dest);
+	fn void!        scan(dests...);
 	fn void         close();
 }
 

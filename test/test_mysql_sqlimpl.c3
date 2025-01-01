@@ -1,4 +1,4 @@
-module mysql8_test @test;
+module mysql8_test @test @if(!$feature(NO_MYSQL));
 
 import std::io;
 import sql;
@@ -31,25 +31,18 @@ mem::@report_heap_allocs_in_scope(false)
 		count++;
 		int a_num;
 		String a_string;
-		ZString a_zstring;
 		bool a_bool;
 		int* a_null;
-		res.scan(0, &a_num)!;
-		res.scan(1, &a_string)!;
-		res.scan(1, &a_zstring)!;
-		res.scan(2, &a_bool)!;
-		res.scan(3, &a_null)!;
+		res.scan(a_num, a_string, a_bool, a_null)!;
 		if (count == 1) {
 			assert(a_num == 1, "a_num should be 1");
 			assert(a_string == "hello", "a_string should be 'hello'");
-			assert(a_zstring.str_view() == "hello", "a_zstring should be 'hello'");
 			assert(a_bool, "a_bool should be 'true'");
 			assert(a_null == null, "a_null should be null");
 		}
 		if (count == 2) {
 			assert(a_num == 2, "a_num should be 2");
 			assert(a_string == "world", "a_string should be 'world'");
-			assert(a_zstring.str_view() == "world", "a_zstring should be 'world'");
 			assert(!a_bool, "a_bool should be 'false'");
 			assert(a_null == null, "a_null should be null");
 		}
@@ -130,8 +123,7 @@ mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 
 	String a_param;
 	String b_param;
-	res.scan(0, &a_param)!;
-	res.scan(1, &b_param)!;
+	res.scan(a_param, b_param)!;
 
 	assert(a_param == expect);
 	assert(b_param == expect2);
@@ -174,7 +166,7 @@ mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 	assert(res.next(), "expected at least one row, got none");
 
 	int x;
-	res.scan(0, &x)!;
+	res.scan(&x)!;
 	assert(x == 1, "x should be 1");
 };
 }

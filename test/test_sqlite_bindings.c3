@@ -1,4 +1,4 @@
-module sqlite_tests @test;
+module sqlite_tests @test @if(!$feature(NO_SQLITE));
 
 import std::io;
 import sqlite3;

@@ -201,20 +201,23 @@ macro @set_null_value(dest, #value, was_null) @private
 	}
 }
 
-fn void! PostgresResult.scan(PostgresResult* self, int fieldnum, any dest) @dynamic
+fn void! PostgresResult.scan(PostgresResult* self, dests...) @dynamic
 {
-	ZString tmp_value = getvalue(self.result, self.current_row, fieldnum);
-	bool was_null = getisnull(self.result, self.current_row, fieldnum);
-	if (was_null) {
-		tmp_value = "";
+	for (usz fieldnum = 0; fieldnum < dests.len; fieldnum++)
+	{
+		ZString tmp_value = getvalue(self.result, self.current_row, (CInt)fieldnum);
+		bool was_null = getisnull(self.result, self.current_row, (CInt)fieldnum);
+		if (was_null) {
+			tmp_value = "";
+		}
+
+		DString builder = dstring::new(allocator:allocator::temp());
+		builder.append(tmp_value.str_view());
+
+		// Sadly our driver currently always returns values as string
+		// In the future, we'll use binary data and avoid conversions from string
+		sql::@convert_builder_value(builder, dests[fieldnum], was_null)!;
 	}
-
-	DString builder = dstring::new(allocator:allocator::temp());
-	builder.append(tmp_value.str_view());
-
-	// Sadly our driver currently always returns values as string
-	// In the future, we'll use binary data and avoid conversions from string
-	sql::@convert_builder_value(builder, dest, was_null)!;
 
 	return;
 }

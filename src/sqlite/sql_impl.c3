@@ -194,23 +194,26 @@ macro @set_null_value(dest, #value, was_null) @private
 	}
 }
 
-fn void! SqliteResult.scan(SqliteResult* self, int fieldnum, any dest) @dynamic
+fn void! SqliteResult.scan(SqliteResult* self, dests...) @dynamic
 {
-	if (fieldnum+1 > self.column_count) {
-		return sql::Error.ILLEGAL_COLUMN_ACCESS?;
+	for (usz fieldnum = 0; fieldnum < dests.len; fieldnum++)
+	{
+		if (fieldnum+1 > self.column_count) {
+			return sql::Error.ILLEGAL_COLUMN_ACCESS?;
+		}
+
+		ColumnType col_type = column_type(self.stmt, (int)fieldnum);
+		ZString tmp_value = column_text(self.stmt, (int)fieldnum);
+
+		bool was_null = (col_type == NULL);
+		if (was_null) {
+			tmp_value = "";
+		}
+
+		DString builder = dstring::new("", allocator::temp());
+		builder.append(tmp_value.str_view());
+		sql::@convert_builder_value(builder, dests[fieldnum], was_null)!;
 	}
-
-	ColumnType col_type = column_type(self.stmt, fieldnum);
-	ZString tmp_value = column_text(self.stmt, fieldnum);
-
-	bool was_null = (col_type == NULL);
-	if (was_null) {
-		tmp_value = "";
-	}
-
-	DString builder = dstring::new("", allocator::temp());
-	builder.append(tmp_value.str_view());
-	sql::@convert_builder_value(builder, dest, was_null)!;
 
 	return;
 }

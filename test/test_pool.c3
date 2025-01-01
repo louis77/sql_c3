@@ -1,4 +1,4 @@
-module pooltest @test;
+module pooltest @test @if(!$feature(NO_PQ));
 
 import std::thread;
 import std::time;

@@ -1,4 +1,4 @@
-module scantest;
+module scantest @if(!$feature(NO_PQ));
 
 import std::io;
 import sql;
@@ -34,7 +34,7 @@ fn void! test_scannable_decode() @test {
 	assert(res.next(), "expected at least one row, got none");
 
 	MyScanner a_param;
-	res.scan(0, &a_param)!;
+	res.scan(a_param)!;
 
 	assert(a_param.int_value == expect);
 }
@@ -63,7 +63,7 @@ fn void! test_scannable_decode_fail() @test {
 	assert(res.next(), "expected at least one row, got none");
 
 	MyUndecodableScanner a_param;
-	if (catch excuse = res.scan(0, &a_param)) {
+	if (catch excuse = res.scan(a_param)) {
 		if (!(excuse == sql::Error.UNSUPPORTED_SCAN_TYPE)) {
 			return excuse?;
 		}
@@ -90,7 +90,7 @@ fn void! test_scannable_decode_fail_with_null() @test {
 	assert(res.next(), "expected at least one row, got none");
 
 	MyUndecodableScanner a_param;
-	if (catch excuse = res.scan(0, &a_param)) {
+	if (catch excuse = res.scan(a_param)) {
 		if (!(excuse == sql::Error.UNSUPPORTED_SCAN_TYPE)) {
 			return excuse?;
 		}
