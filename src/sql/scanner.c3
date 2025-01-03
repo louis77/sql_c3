@@ -90,3 +90,37 @@ macro void! @convert_builder_value(builder, dest, is_null)
 			scan_with_function((Scannable)dest, builder.zstr_view(), is_null)!;
 	}
 }
+
+def @SqlName(value) = {
+    @tag("sql_name", value)
+};
+
+def @SqlOmit = {
+    @tag("sql_omit", true)
+};
+
+macro Result.@scan_struct(&self, &value)
+{
+	var $Type = $typeof(*value);
+	var col_num = self.num_columns();
+    // io::printfn("type is: %s", $Type.nameof);
+	// io::printfn("cols: %d", col_num);
+	for (usz i = 0; i < col_num; i++)
+	{
+		$foreach ($idx, $field : $Type.membersof)
+//			io::printfn("-> field: %s", $field.nameof);
+			var $col_name = $field.nameof;
+
+			$if $field.has_tagof("sql_name"):
+				$col_name = $field.tagof("sql_name");
+//				io::printfn("   sql name is: %s", $field.tagof("sql_name"));
+			$else
+			$endif
+			$if $field.has_tagof("sql_omit"):
+//				io::printfn("   sql omit: %s", $field.tagof("sql_omit"));
+			$else
+				self.scan_field($idx, &$field.get(*value))!;
+			$endif
+		$endforeach
+	}
+}

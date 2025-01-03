@@ -11,6 +11,7 @@ struct PostgresResult (sql::Result) {
 	PGresult result;
 	int current_row;  // TODO: Match with maximum size of rows returned by driver
 	usz row_count;
+	usz col_count;
 }
 
 struct PostgresConnection (sql::Connection) {
@@ -108,6 +109,7 @@ fn sql::Result! PostgresConnection.query(PostgresConnection* self, String comman
 
 	PostgresResult* res = mem::new(PostgresResult);
 	res.row_count = ntuples(result);
+	res.col_count = nfields(result);
 	res.current_row = -1;
 	res.result = result;
 
@@ -183,6 +185,11 @@ fn bool PostgresConnection.tx_in_progress(PostgresConnection* self) @dynamic
 
 // Result
 
+fn usz PostgresResult.num_columns(PostgresResult* self) @dynamic
+{
+	return self.col_count;
+}
+
 fn bool PostgresResult.next(PostgresResult* self) @dynamic
 {
 	self.current_row++;
@@ -201,22 +208,30 @@ macro @set_null_value(dest, #value, was_null) @private
 	}
 }
 
+fn void! PostgresResult.scan_field(PostgresResult* self, usz fieldnum, any dest) @dynamic
+{
+	ZString tmp_value = getvalue(self.result, self.current_row, (CInt)fieldnum);
+	bool was_null = getisnull(self.result, self.current_row, (CInt)fieldnum);
+	if (was_null) {
+		tmp_value = "";
+	}
+
+	DString builder = dstring::new(allocator:allocator::temp());
+	builder.append(tmp_value.str_view());
+
+	// Sadly our driver currently always returns values as string
+	// In the future, we'll use binary data and avoid conversions from string
+	sql::@convert_builder_value(builder, dest, was_null)!;
+
+	return;
+}
+
+
 fn void! PostgresResult.scan(PostgresResult* self, dests...) @dynamic
 {
 	for (usz fieldnum = 0; fieldnum < dests.len; fieldnum++)
 	{
-		ZString tmp_value = getvalue(self.result, self.current_row, (CInt)fieldnum);
-		bool was_null = getisnull(self.result, self.current_row, (CInt)fieldnum);
-		if (was_null) {
-			tmp_value = "";
-		}
-
-		DString builder = dstring::new(allocator:allocator::temp());
-		builder.append(tmp_value.str_view());
-
-		// Sadly our driver currently always returns values as string
-		// In the future, we'll use binary data and avoid conversions from string
-		sql::@convert_builder_value(builder, dests[fieldnum], was_null)!;
+		self.scan_field(fieldnum, dests[fieldnum])!;
 	}
 
 	return;

@@ -233,6 +233,11 @@ fn bool MysqlConnection.tx_in_progress(MysqlConnection* self) @dynamic
 
 // Result
 
+fn usz MysqlResult.num_columns(MysqlResult* self) @dynamic
+{
+	return 0;
+}
+
 fn bool MysqlResult.next(MysqlResult* self) @dynamic
 {
 	CInt status = stmt_fetch(self.stmt);
@@ -241,51 +246,60 @@ fn bool MysqlResult.next(MysqlResult* self) @dynamic
 	return true;
 }
 
+fn void! MysqlResult.scan_field(MysqlResult* self, usz fieldnum, any dest) @dynamic
+{
+	if (fieldnum+1 > self.num_fields) {
+		return sql::Error.ILLEGAL_COLUMN_ACCESS?;
+	}
+
+	DString builder = dstring::new(allocator:allocator::temp());
+
+	usz chunk = 0;
+	usz ret_size = 0;
+	CULong buffer_size = 1024;
+	CULong offset = 0;
+	bool is_null;
+	ZString buffer = (ZString)calloc(char.sizeof * buffer_size);
+	defer free(buffer);
+
+	MysqlBind* bind = calloc(MysqlBind.sizeof);
+	defer free(bind);
+	bind.buffer_type = TYPE_VARCHAR;
+	bind.buffer = buffer;
+	bind.buffer_length = buffer_size;
+	bind.is_null = &is_null;
+
+	do {
+		chunk++;
+
+		CInt status = stmt_fetch_column(self.stmt, bind, (CUInt)fieldnum, offset);
+		if (status != 0) return sql::Error.UNKNOWN_ERROR?;
+
+		ret_size = libc::strlen(buffer);
+
+		if (ret_size > 0) {
+			offset += ret_size;
+			builder.write(buffer[..ret_size-1])!;
+		}
+
+	} while(ret_size > 0 && ret_size == buffer_size);
+
+	sql::@convert_builder_value(builder, dest, is_null)!;
+
+	return;
+}
+
+
 fn void! MysqlResult.scan(MysqlResult* self, dests...) @dynamic
 {
 	for (usz fieldnum = 0; fieldnum < dests.len; fieldnum++)
 	{
-		if (fieldnum+1 > self.num_fields) {
-			return sql::Error.ILLEGAL_COLUMN_ACCESS?;
-		}
-
-		DString builder = dstring::new(allocator:allocator::temp());
-
-		usz chunk = 0;
-		usz ret_size = 0;
-		CULong buffer_size = 1024;
-		CULong offset = 0;
-		bool is_null;
-		ZString buffer = (ZString)calloc(char.sizeof * buffer_size);
-		defer free(buffer);
-
-		MysqlBind* bind = calloc(MysqlBind.sizeof);
-		defer free(bind);
-		bind.buffer_type = TYPE_VARCHAR;
-		bind.buffer = buffer;
-		bind.buffer_length = buffer_size;
-		bind.is_null = &is_null;
-
-		do {
-			chunk++;
-
-			CInt status = stmt_fetch_column(self.stmt, bind, (CUInt)fieldnum, offset);
-			if (status != 0) return sql::Error.UNKNOWN_ERROR?;
-
-			ret_size = libc::strlen(buffer);
-
-			if (ret_size > 0) {
-				offset += ret_size;
-				builder.write(buffer[..ret_size-1])!;
-			}
-
-		} while(ret_size > 0 && ret_size == buffer_size);
-
-		sql::@convert_builder_value(builder, dests[fieldnum], is_null)!;
+		self.scan_field(fieldnum, dests[fieldnum])!;
 	}
 
 	return;
 }
+
 
 fn void MysqlResult.close(MysqlResult* self) @dynamic
 {

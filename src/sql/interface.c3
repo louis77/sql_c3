@@ -36,8 +36,10 @@ interface Connection
 *>
 interface Result
 {
+	fn usz			num_columns();
 	fn bool         next();
 	fn void!        scan(dests...);
+	fn void!		scan_field(usz fieldnum, any dest);
 	fn void         close();
 }
 
@@ -63,4 +65,5 @@ fault Error
 	TX_ALREADY_IN_PROGRESS,
 	UNKNOWN_DRIVER,
 	POOL_EXHAUSTED,
+	TYPE_MISMATCH,
 }

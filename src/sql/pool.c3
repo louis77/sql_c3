@@ -8,6 +8,9 @@ import std::time;
 
 distinct ConnLastUsed = Tuple(<Connection, Time>);
 
+const THREAD_SLEEP_MS = 50;
+
+<* Pool represents a pool object. *>
 struct Pool {
 	Mutex mu;
 	String driver_id;
@@ -26,7 +29,7 @@ fn int manager_work(void* args) @private
 	Pool* pool = (Pool*)args;
 	while (!pool.should_close)
 	{
-		thread::sleep_ms(100);
+		thread::sleep_ms(THREAD_SLEEP_MS);
 		pool.mu.lock()!!;
 
 		List(<Connection>) expired_connections;
@@ -58,10 +61,10 @@ fn Pool*! create_pool(String driver_id, String connection_string, usz max_open_c
 {
 	Pool* pool = mem::new(Pool);
 	pool.mu.init()!;
-	pool.driver_id = driver_id;
+	pool.driver_id         = driver_id;
 	pool.connection_string = connection_string;
-	pool.max_open_conns = max_open_conns;
-	pool.max_idle_timeout = max_idle_timeout;
+	pool.max_open_conns    = max_open_conns;
+	pool.max_idle_timeout  = max_idle_timeout;
 
 	pool.conns_inuse.new_init(0, allocator);
 	pool.conns_unused.new_init(0, allocator);
@@ -141,7 +144,6 @@ fn void Pool.close_all(&self) @private
 
 	foreach (idx, &conn : self.conns_unused)
 	{
-		io::printn("CLOSED UNUSED");
 		conn.first.close();
 	}
 	self.conns_unused.clear();

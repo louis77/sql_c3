@@ -100,3 +100,38 @@ fn void! test_scannable_decode_fail_with_null() @test {
 	}
 	assert(false, "a type without decode() should fail even with NULL values");
 }
+
+
+
+struct AccessKey {
+	String group    @SqlName("grp");
+	String key      @SqlOmit;
+	String ts       @SqlName("updated_at");
+	String name;
+	String type;
+}
+
+fn void! test_scan_struct() @test
+{
+	sql::Connection conn = sql::open("postgres", connection_string)!;
+	defer try conn.close();
+
+	String cmd = `SELECT 'vt' as grp, '1234' as key, 'now' as updated_at, 'John' as name, 'person' as type`;
+	Result! res = conn.query(cmd);
+
+	if (catch excuse = res) {
+		io::printn(conn.last_error());
+		return excuse?;
+	}
+	defer res.close();
+	assert(res.next(), "expected at least one row, got none");
+
+	AccessKey ak;
+	res.@scan_struct(ak)!;
+
+	assert(ak.group == "vt", "ak.group should be 'vt', was '%s'", ak.group);
+	assert(ak.key == "", "ak.key should be omitted, was '%s'", ak.key);
+	assert(ak.ts == "now", "ak.ts should be 'now', was '%s'", ak.ts);
+	assert(ak.name == "John", "ak.name should be 'John', was '%s'", ak.name);
+	assert(ak.type == "person", "ak.type should be 'person', was '%s'", ak.type);
+}

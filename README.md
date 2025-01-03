@@ -115,8 +115,6 @@ pool.release(conn)!;
 The `sql` package has the following API:
 
 ```kotlin
-fn Connection! open(String driver_id, String connection_string);
-
 // The driver_id is registered by the respective driver module.
 // See the drivers section for how to register a custom driver.
 
@@ -135,6 +133,7 @@ interface Connection
 	fn bool         tx_in_progress();
 }
 
+fn Connection! open(String driver_id, String connection_string);
 
 struct Pool {}
 
@@ -148,8 +147,10 @@ fn usz          Pool.conns_available();
 
 interface Result
 {
+	fn usz			num_columns();
 	fn bool         next();
 	fn void!        scan(dests...);
+	fn void!		scan_field(usz fieldnum, any dest);
 	fn void         close();
 }
 
@@ -204,9 +205,42 @@ double*
 float*
 ```
 
-Use the `Result.scan()` function to scan into any of these types. If you scan into a pointer type, it will be set to `null` if the result was SQL `NULL`. Otherwise `NULL` will scan into an empty value.
+Use the `Result.scan()` function to scan into any of these types.. If you scan into a pointer type, it will be set to `null` if the result was SQL `NULL`. Otherwise `NULL` will scan into an empty value.
 
 Other types will currently return a `UNSUPPORTED_SCAN_TYPE` fault.
+
+### Scanning into structs
+
+The conveniece macro `Result.@scan_struct()` makes it possible to scan the whole row into a user-defined `struct`. It also provides two Tagged Attributes, that modify the scanning. Example:
+
+```kotlin
+// Define a struct
+struct AccessKey {
+	String group    @SqlName("grp");
+	String key      @SqlOmit;
+	String ts       @SqlName("updated_at");
+	String name;
+	String type;
+}
+
+fn void main()
+{
+	sql::Connection conn = sql::open("postgres", connection_string)!!;
+	defer try conn.close();
+
+	String cmd = `SELECT 'vt' as grp, '1234' as key, 'now' as updated_at, 'John' as name, 'person' as type`;
+	Result! res = conn.query(cmd)!!;
+	defer res.close();
+
+	AccessKey ak;
+	res.@scan_struct(ak)!!;
+}
+```
+
+There are currently the following two attributes:
+
+- `@SqlName(fieldname)` is the name of the column from your query that maps to this field. The default is the name of the struct field
+- `@SqlOmit` will skip scanning into this field
 
 ### Scanning into custom types
 
@@ -255,17 +289,18 @@ Currently supported:
 - [x] Connecting to a database
 - [x] Execution of Queries and Statements
 - [x] Scanning of result values into all native C3 types
+- [x] Scanning into arbitrary custom types
+- [x] Scanning into structs
 - [x] Parameterized queries
 - [x] Transactions
 - [x] Connection pooling
-- [x] Support scanning into custom type
 
 In progress:
 
 - [ ] Fix some memory leaks
 - [ ] Support binding custom types
 - [ ] Prepared statements (currently used internally, but not exposed to the user)
-- [ ] Support for DB specific types
+- [ ] Implement some DB specific types (i.e. pq arrays)
 - [ ] Use binary encoding of params/result values
 
 On-demand, because the currently supported databases (pq, mysql, sqlite) don't support these features:

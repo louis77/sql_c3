@@ -176,6 +176,11 @@ fn bool SqliteConnection.tx_in_progress(SqliteConnection* self) @dynamic
 
 // Result
 
+fn usz SqliteResult.num_columns(SqliteResult* self) @dynamic
+{
+	return 0;
+}
+
 fn bool SqliteResult.next(SqliteResult* self) @dynamic
 {
 	ResultStatus ret = step(self.stmt);
@@ -194,25 +199,55 @@ macro @set_null_value(dest, #value, was_null) @private
 	}
 }
 
+fn void! SqliteResult.scan_field(SqliteResult* self, usz fieldnum, any dest) @dynamic
+{
+	if (fieldnum+1 > self.column_count) {
+		return sql::Error.ILLEGAL_COLUMN_ACCESS?;
+	}
+
+	ColumnType col_type = column_type(self.stmt, (int)fieldnum);
+
+	bool was_null = (col_type == NULL);
+
+	// Use binary functions first
+	// switch (col_type)
+	// {
+	// 	case INTEGER:
+	// 		io::printfn("scanning field %d natively", fieldnum);
+	// 		@scan_natively_int(dests[fieldnum], self.stmt, fieldnum, was_null)!;
+	// 		continue;
+	// 	case NULL:
+	// 		if (dests[fieldnum].type.kindof == POINTER)
+	// 		{
+	// 			dests[fieldnum] = null;
+	// 			continue;
+	// 		}
+	// 		else
+	// 		{
+	// 			// *(dests[fieldnum]) = 0;
+	// 		}
+	// 	default:
+	// 		io::printfn("scanning field %d via builder", fieldnum);
+	// }
+
+	// Then fallback to generic text-to-* converter
+	ZString tmp_value = column_text(self.stmt, (int)fieldnum);
+	if (was_null) {
+		tmp_value = "";
+	}
+	DString builder = dstring::new("", allocator::temp());
+	builder.append(tmp_value.str_view());
+	sql::@convert_builder_value(builder, dest, was_null)!;
+
+	return;
+}
+
+
 fn void! SqliteResult.scan(SqliteResult* self, dests...) @dynamic
 {
 	for (usz fieldnum = 0; fieldnum < dests.len; fieldnum++)
 	{
-		if (fieldnum+1 > self.column_count) {
-			return sql::Error.ILLEGAL_COLUMN_ACCESS?;
-		}
-
-		ColumnType col_type = column_type(self.stmt, (int)fieldnum);
-		ZString tmp_value = column_text(self.stmt, (int)fieldnum);
-
-		bool was_null = (col_type == NULL);
-		if (was_null) {
-			tmp_value = "";
-		}
-
-		DString builder = dstring::new("", allocator::temp());
-		builder.append(tmp_value.str_view());
-		sql::@convert_builder_value(builder, dests[fieldnum], was_null)!;
+		self.scan_field(fieldnum, dests[fieldnum])!;
 	}
 
 	return;
@@ -223,4 +258,21 @@ fn void SqliteResult.close(SqliteResult* self) @dynamic
 	finalize(self.stmt);
 	mem::free(self);
 	return;
+}
+
+macro void! @scan_natively_int(dest, stmt, fieldnum, was_null)
+{
+	CUInt value = column_int(stmt, (int)fieldnum);
+	switch (dest) {
+		case int:
+			*dest = value;
+		case int*:
+			@set_null_value(dest, value, was_null);
+		case bool:
+			*dest = (value != 0);
+		case bool*:
+			@set_null_value(dest, value != 0, was_null);
+		default:
+			return Error.TYPE_MISMATCH?;
+	}
 }

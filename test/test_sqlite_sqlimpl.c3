@@ -39,7 +39,7 @@ mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 		res.scan(a_num, a_string, a_bool, a_null)!;
 		if (count == 1) {
 			assert(a_num == 1, "a_num should be 1");
-			assert(a_string == "hello", "a_string should be 'hello'");
+			assert(a_string == "hello", "a_string should be 'hello', was '%s'", a_string);
 			assert(a_bool, "a_bool should be 'true'");
 			assert(a_null == null, "a_null should be null");
 		}
