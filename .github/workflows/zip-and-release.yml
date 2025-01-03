@@ -1,0 +1,110 @@
+name: Zip and Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  package-and-zip:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Move files to src directory
+        run: |
+          find src -type f -mindepth 2 -exec mv {} src/ \;
+          find src -type d -empty -delete
+
+      - name: Determine Build Number
+        id: determine_build
+        run: echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: Create manifest.json file
+        run: |
+          cat <<EOT > src/manifest.json
+          // C3API BUILD: ${{ env.BUILD_NUMBER }}
+          {
+            "provides" : "sql_c3",
+            "targets" : {
+              "freebsd-x64" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "linux-aarch64" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "linux-riscv32" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "linux-riscv64" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "linux-x86" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "linux-x64" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "macos-aarch64" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "macos-x64" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "netbsd-x64" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "openbsd-x64" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "wasm32" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "wasm64" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "windows-aarch64" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []},
+              "windows-x64" : {"link-args" : [], "dependencies" : [], "linked-libraries" : []}
+            }
+          }
+          EOT
+
+      - name: Zip src contents to top-level sql_c3.c3l
+        run: |
+          cd src
+          zip -r ../sql_c3.c3l ./*
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: src-zip
+          path: sql_c3.c3l
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [package-and-zip]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Read Release Notes
+        id: get_release_notes
+        run: |
+          release_notes=$(cat release_notes.md)
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          echo "$release_notes" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Determine Tag Version
+        id: determine_tag
+        run: |
+          echo "TAG_VERSION=build-${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_VERSION }}
+          release_name: "Release ${{ env.TAG_VERSION }}"
+          body: ${{ env.RELEASE_NOTES }}
+          draft: false
+          prerelease: false
+
+      - name: Download zip artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: src-zip
+
+      - name: Upload zip to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: sql_c3.c3l
+          asset_name: sql_c3.c3l
+          asset_content_type: application/zip
