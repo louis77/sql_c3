@@ -2,8 +2,8 @@ module mysql8 @if($defined(ping));
 
 import std::io;
 import std::collections::list;
+import std::net::url;
 import libc;
-import url;
 import sql;
 
 struct MysqlDriver (sql::Driver) {

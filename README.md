@@ -10,11 +10,13 @@ The database bindings have contributed to the [C3 vendor](https://github.com/c3l
 
 ## <a name="installing"></a>Installing
 
-- Make sure you have the latest C3 compiler installed (tested with 0.6.5)
-- Clone the repository (with submodules to also get dependencies) and run the tests:
+- Make sure you have the latest C3 compiler installed (0.6.6+)
+- Clone the repository
+- Fetch project dependencies
+- Optionally, run the tests
 
 ```sh
-git clone --recurse-submodules https://github.com/louis77/sql_c3
+git clone https://github.com/louis77/sql_c3
 cd sql_c3
 
 # Get bindings for pq, mysql8 and sqlite3 from vendor library
