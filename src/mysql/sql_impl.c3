@@ -235,7 +235,7 @@ fn bool MysqlConnection.tx_in_progress(MysqlConnection* self) @dynamic
 
 fn usz MysqlResult.num_columns(MysqlResult* self) @dynamic
 {
-	return 0;
+	return self.num_fields;
 }
 
 fn bool MysqlResult.next(MysqlResult* self) @dynamic

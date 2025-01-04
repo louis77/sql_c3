@@ -178,7 +178,7 @@ fn bool SqliteConnection.tx_in_progress(SqliteConnection* self) @dynamic
 
 fn usz SqliteResult.num_columns(SqliteResult* self) @dynamic
 {
-	return 0;
+	return self.column_count;
 }
 
 fn bool SqliteResult.next(SqliteResult* self) @dynamic
