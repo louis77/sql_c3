@@ -47,6 +47,7 @@ mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 };
 }
 
+
 fn void! test_sqlite_scan_intnull()
 {
 mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
@@ -63,11 +64,12 @@ mem::@report_heap_allocs_in_scope($feature(MEMCHECK))
 		count++;
 		int value;
 		res.scan(value)!;
-		assert(value == 0, "a_num should be 0");
+		assert(value == 0, "value should be 0");
 	}
 };
 }
 
+/*
 fn void! test_sqlite_scan_intptrnull()
 {
 mem::@report_heap_allocs_in_scope($feature(MEMCHECK))

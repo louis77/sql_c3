@@ -28,12 +28,25 @@ macro void! @convert_builder_value(builder, dest, is_null)
 	switch (dest) {
 		case String:
 			*dest = builder.str_view();
+			return;
 		case String*:
 			@set_null_value(dest, builder.str_view(), is_null);
+			return;
 		case ZString:
 			*dest = builder.zstr_view();
+			return;
 		case ZString*:
 			@set_null_value(dest, builder.zstr_view(), is_null);
+			return;
+	}
+
+	// Still here, if the string is empty, set it to 0 to make it convertiable
+	if (builder.len() == 0)
+	{
+		builder.append_char('0');
+	}
+
+	switch (dest) {
 		case bool:
 			*dest = (builder.str_view() == "1" || builder.str_view() == "t") ? true : false;
 		case bool*:
